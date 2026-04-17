@@ -1,2 +1,2 @@
-# Time Table Generator for Universities
+# Time Table Generator
 
