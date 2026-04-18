@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+
+<body onload="checkUser()">
+
+<div class="container">
+
+```
+<h2>Timetable Generator</h2>
+
+<!-- Generator Panel -->
+<div class="controls">
+
+    <label>Select Timetable Type:</label>
+
+    <select id="type" onchange="handleTypeChange()">
+        <option value="overall">Overall Timetable</option>
+        <option value="faculty">Faculty-wise Timetable</option>
+        <option value="batch">Batch-wise Timetable</option>
+        <option value="room">Room-wise Timetable</option>
+    </select>
+
+    <!-- Dynamic Selectors -->
+    <select id="facultySelect" style="display:none;">
+        <option>F01</option>
+        <option>F02</option>
+    </select>
+
+    <select id="batchSelect" style="display:none;">
+        <option>Sem 4 - A</option>
+        <option>Sem 4 - B</option>
+    </select>
+
+    <select id="roomSelect" style="display:none;">
+        <option>C101</option>
+        <option>C102</option>
+    </select>
+
+    <button onclick="generateTimetable()">Generate</button>
+
+</div>
+
+<!-- Conflict Message -->
+<div id="conflictBox" class="conflict">
+    Conflicts detected. Please review.
+</div>
+
+<!-- Timetable Grid -->
+<table>
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Monday</th>
+            <th>Tuesday</th>
+            <th>Wednesday</th>
+            <th>Thursday</th>
+            <th>Friday</th>
+        </tr>
+    </thead>
+
+    <tbody id="timetable-body">
+        <!-- JS will fill this -->
+    </tbody>
+</table>
+```
+
+</div>
+
+<script src="../static/script.js"></script>
+
+</body>
+</html>

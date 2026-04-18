@@ -38,7 +38,7 @@ def create_app(config_class=DevelopmentConfig):
     # ------------------------------------------------------------------
     # Create database tables on first launch
     # ------------------------------------------------------------------
-    init_db()
+    #init_db()
 
     return app
 

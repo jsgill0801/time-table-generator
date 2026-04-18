@@ -1,0 +1,73 @@
+body {
+font-family: Arial, sans-serif;
+background-color: #f4f6f8;
+margin: 20px;
+color: #333;
+}
+
+/* Container */
+.container {
+max-width: 900px;
+margin: auto;
+background: white;
+padding: 20px;
+border-radius: 6px;
+box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+/* Headings */
+h2 {
+margin-bottom: 15px;
+}
+
+/* Dropdown + button */
+.controls {
+margin-bottom: 20px;
+}
+
+select, button {
+padding: 8px;
+margin-right: 10px;
+border: 1px solid #ccc;
+border-radius: 4px;
+}
+
+button {
+background-color: #2f80ed;
+color: white;
+border: none;
+cursor: pointer;
+}
+
+button:hover {
+background-color: #1c5ed6;
+}
+
+/* Table */
+table {
+width: 100%;
+border-collapse: collapse;
+margin-top: 20px;
+}
+
+th {
+background-color: #e6eef8;
+}
+
+th, td {
+border: 1px solid #ccc;
+padding: 10px;
+text-align: center;
+font-size: 14px;
+}
+
+/* Conflict box */
+.conflict {
+margin-top: 15px;
+padding: 10px;
+background-color: #ffe6e6;
+color: #a33;
+border: 1px solid #ffb3b3;
+border-radius: 4px;
+display: none;
+}
