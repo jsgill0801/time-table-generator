@@ -6,17 +6,25 @@ with the Flask application.
 """
 
 from backend.routes.auth_routes import auth_bp
+from backend.routes.course_routes import course_bp
+from backend.routes.batch_routes import batch_bp
+from backend.routes.faculty_routes import faculty_bp
+from backend.routes.classroom_routes import classroom_bp
+from backend.routes.slot_routes import slot_bp
+from backend.routes.category_routes import category_bp
+from backend.routes.batch_course_routes import batch_course_bp
+from backend.routes.faculty_course_routes import faculty_course_bp
 
 
 def register_blueprints(app):
     """Register all route blueprints under /api/v1/."""
 
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
-
-    # CRUD blueprints will be registered here as they are built:
-    # app.register_blueprint(course_bp, url_prefix="/api/v1/courses")
-    # app.register_blueprint(batch_bp, url_prefix="/api/v1/batches")
-    # app.register_blueprint(faculty_bp, url_prefix="/api/v1/faculties")
-    # app.register_blueprint(classroom_bp, url_prefix="/api/v1/classrooms")
-    # app.register_blueprint(slot_bp, url_prefix="/api/v1/slots")
-    # app.register_blueprint(generate_bp, url_prefix="/api/v1/generate")
+    app.register_blueprint(course_bp, url_prefix="/api/v1/courses")
+    app.register_blueprint(batch_bp, url_prefix="/api/v1/batches")
+    app.register_blueprint(faculty_bp, url_prefix="/api/v1/faculties")
+    app.register_blueprint(classroom_bp, url_prefix="/api/v1/classrooms")
+    app.register_blueprint(slot_bp, url_prefix="/api/v1/slots")
+    app.register_blueprint(category_bp, url_prefix="/api/v1/categories")
+    app.register_blueprint(batch_course_bp, url_prefix="/api/v1/batch-courses")
+    app.register_blueprint(faculty_course_bp, url_prefix="/api/v1/faculty-courses")
