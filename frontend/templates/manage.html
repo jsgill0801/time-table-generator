@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Data Hub | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="app-page" data-page="manage">
+    <div class="app-shell">
+        <aside class="app-sidebar" data-sidebar></aside>
+
+        <main class="app-main">
+            <header class="page-header">
+                <div>
+                    <p class="page-kicker">Legacy Access Point</p>
+                    <h1>Academic Data Hub</h1>
+                    <p class="page-intro">This page keeps older navigation paths usable while directing administrators to the dedicated setup pages that power the timetable workflow.</p>
+                </div>
+                <div class="page-chip">Data Review</div>
+            </header>
+
+            <section class="hub-grid">
+                <a class="hub-card" href="courses.html">
+                    <h2>Courses</h2>
+                    <p>Review the course catalogue and teaching categories used in generation.</p>
+                </a>
+
+                <a class="hub-card" href="faculty.html">
+                    <h2>Faculty</h2>
+                    <p>Track faculty availability, subject coverage, and weekly load.</p>
+                </a>
+
+                <a class="hub-card" href="rooms.html">
+                    <h2>Rooms</h2>
+                    <p>Validate room capacities, room types, and allocation readiness.</p>
+                </a>
+
+                <a class="hub-card" href="batches.html">
+                    <h2>Batches</h2>
+                    <p>Maintain sections and strengths for batch-wise timetable exports.</p>
+                </a>
+
+                <a class="hub-card" href="categories.html">
+                    <h2>Categories</h2>
+                    <p>Check category rules that influence theory, lab, and elective placement.</p>
+                </a>
+
+                <a class="hub-card" href="slots.html">
+                    <h2>Slots</h2>
+                    <p>Confirm the daily time windows available to the scheduling engine.</p>
+                </a>
+            </section>
+
+            <section class="content-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Recommended Workflow</h2>
+                        <p class="panel-subtext">Use this order to keep the timetable generation cycle clean and predictable for admin teams.</p>
+                    </div>
+                </div>
+
+                <div class="workflow-grid">
+                    <article class="workflow-card">
+                        <span>1</span>
+                        <h3>Review academic data</h3>
+                        <p>Confirm courses, faculty, rooms, batches, categories, and slots are up to date.</p>
+                    </article>
+
+                    <article class="workflow-card">
+                        <span>2</span>
+                        <h3>Run from dashboard</h3>
+                        <p>Trigger the master timetable only after the setup pages have been checked.</p>
+                    </article>
+
+                    <article class="workflow-card">
+                        <span>3</span>
+                        <h3>Download the correct view</h3>
+                        <p>Use the timetable page for overall, faculty-wise, room-wise, or batch-wise exports.</p>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>

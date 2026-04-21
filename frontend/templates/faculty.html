@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="app-page" data-page="faculty" data-resource-page="faculty">
+    <div class="app-shell">
+        <aside class="app-sidebar" data-sidebar></aside>
+
+        <main class="app-main">
+            <header class="page-header">
+                <div>
+                    <p class="page-kicker">Academic Setup</p>
+                    <h1 data-resource-title></h1>
+                    <p class="page-intro" data-resource-description></p>
+                </div>
+                <div class="page-chip" data-resource-chip></div>
+            </header>
+
+            <section class="stats-grid stats-grid-compact" data-resource-metrics></section>
+
+            <section class="panel-grid">
+                <article class="content-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 data-table-title></h2>
+                            <p class="panel-subtext">Search by faculty details, department, or load to review the teaching pool.</p>
+                        </div>
+
+                        <label class="search-field">
+                            <span>Search</span>
+                            <input type="search" data-resource-search>
+                        </label>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead data-resource-head></thead>
+                            <tbody data-resource-body></tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state is-hidden" id="resourceEmptyState">
+                        <p>No matching records were found for the current search.</p>
+                    </div>
+                </article>
+
+                <aside class="content-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>Operational Note</h2>
+                            <p class="panel-subtext" data-resource-note></p>
+                        </div>
+                    </div>
+
+                    <div class="detail-list" data-resource-highlights></div>
+                </aside>
+            </section>
+        </main>
+    </div>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>

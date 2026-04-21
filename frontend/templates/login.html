@@ -1,20 +1,62 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
 <head>
-    <title>Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
 </head>
-<body>
+<body class="auth-page">
+    <main class="auth-shell">
+        <section class="auth-brand">
+            <div>
+                <small>College Administration</small>
+                <h1>Timetable Generator</h1>
+                <p>Sign in to review academic data, run the master timetable, and download the final Excel exports without exposing the full schedule on screen.</p>
+            </div>
 
-<h2>Login Page</h2>
+            <div class="auth-points">
+                <div class="auth-point">
+                    <strong>Single admin workspace</strong>
+                    <p>Dashboard, setup pages, and exports share one consistent interface.</p>
+                </div>
+                <div class="auth-point">
+                    <strong>Conflict-first workflow</strong>
+                    <p>Course and faculty clashes are surfaced before final timetable downloads.</p>
+                </div>
+                <div class="auth-point">
+                    <strong>Export-ready views</strong>
+                    <p>Overall, faculty, room, and batch files download from the same stored run.</p>
+                </div>
+            </div>
+        </section>
 
-<input type="text" id="username" placeholder="Enter Username"><br><br>
+        <section class="auth-card">
+            <div>
+                <h2>Login</h2>
+                <p class="muted-copy">Enter your credentials to continue to the administration dashboard.</p>
+            </div>
 
-<button onclick="login()">Login</button>
+            <form class="auth-form" id="loginForm">
+                <div class="form-field">
+                    <label for="loginUsername">Username</label>
+                    <input id="loginUsername" name="username" type="text" placeholder="Enter username" autocomplete="username" required>
+                </div>
 
-<p>Don't have an account? <a href="signup.html">Signup</a></p>
+                <div class="form-field">
+                    <label for="loginPassword">Password</label>
+                    <input id="loginPassword" name="password" type="password" placeholder="Enter password" autocomplete="current-password" required>
+                </div>
 
-<script src="../static/script.js"></script>
+                <p class="form-error is-hidden" id="loginError" aria-live="polite"></p>
 
+                <button class="btn-primary" type="submit">Sign In</button>
+            </form>
+
+            <p class="auth-footer">Need an account? <a href="signup.html">Create one</a></p>
+        </section>
+    </main>
+
+    <script src="../static/script.js" defer></script>
 </body>
 </html>

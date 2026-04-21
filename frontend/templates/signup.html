@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="auth-page">
+    <main class="auth-shell">
+        <section class="auth-brand">
+            <div>
+                <small>Onboarding</small>
+                <h1>Create Admin Access</h1>
+                <p>Set up a new account for college administration staff so they can manage academic data and generate timetable exports from one unified workspace.</p>
+            </div>
+
+            <div class="auth-points">
+                <div class="auth-point">
+                    <strong>Structured data flow</strong>
+                    <p>Courses, faculty, rooms, batches, categories, and slots all live in dedicated pages.</p>
+                </div>
+                <div class="auth-point">
+                    <strong>Clear generation step</strong>
+                    <p>The dashboard isolates generation from download to keep the process easy to follow.</p>
+                </div>
+                <div class="auth-point">
+                    <strong>Professional admin UI</strong>
+                    <p>The interface is built for routine college operations, not a prototype demo.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="auth-card">
+            <div>
+                <h2>Signup</h2>
+                <p class="muted-copy">Create an account to access the timetable administration interface.</p>
+            </div>
+
+            <form class="auth-form" id="signupForm">
+                <div class="form-field">
+                    <label for="signupUsername">Username</label>
+                    <input id="signupUsername" name="username" type="text" placeholder="Choose a username" autocomplete="username" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="signupEmail">Email</label>
+                    <input id="signupEmail" name="email" type="email" placeholder="Enter institutional email" autocomplete="email" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="signupPassword">Password</label>
+                    <input id="signupPassword" name="password" type="password" placeholder="Create a password" autocomplete="new-password" required>
+                </div>
+
+                <p class="form-error is-hidden" id="signupError" aria-live="polite"></p>
+
+                <button class="btn-primary" type="submit">Create Account</button>
+            </form>
+
+            <p class="auth-footer">Already registered? <a href="login.html">Return to login</a></p>
+        </section>
+    </main>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>

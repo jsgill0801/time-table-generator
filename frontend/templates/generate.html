@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="app-page" data-page="dashboard">
+    <div class="app-shell">
+        <aside class="app-sidebar" data-sidebar></aside>
+
+        <main class="app-main">
+            <header class="page-header">
+                <div>
+                    <p class="page-kicker">Generation Workspace</p>
+                    <h1>Dashboard</h1>
+                    <p class="page-intro">This route now mirrors the dashboard experience so the timetable run stays in one clear place for administrators.</p>
+                </div>
+                <div class="page-chip" id="generationStatusLabel">Awaiting run</div>
+            </header>
+
+            <section class="stats-grid" aria-label="Dashboard summary">
+                <article class="stat-card stat-card-primary">
+                    <div>
+                        <span class="stat-label">Courses Offered</span>
+                        <strong class="stat-value" id="courseCount">0</strong>
+                    </div>
+                    <p>Course records currently prepared for timetable allocation.</p>
+                </article>
+
+                <article class="stat-card stat-card-secondary">
+                    <div>
+                        <span class="stat-label">Faculty Available</span>
+                        <strong class="stat-value" id="facultyCount">0</strong>
+                    </div>
+                    <p>Faculty members available for the current timetable run.</p>
+                </article>
+            </section>
+
+            <section class="content-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Master Timetable Run</h2>
+                        <p class="panel-subtext" id="runContext">Use this route or the dashboard tab to trigger the same generation flow and store the timetable data for downloads.</p>
+                    </div>
+                </div>
+
+                <div class="run-layout">
+                    <article class="run-card">
+                        <h3>Run Generation</h3>
+                        <p>The timetable itself stays out of view here. This screen is dedicated to validation, generation, and clean progress feedback only.</p>
+
+                        <div class="run-actions">
+                            <button class="btn-primary btn-large" id="runTimetableButton" type="button">Run</button>
+                            <div class="status-inline" id="runStatus" role="status" aria-live="polite">
+                                <span class="spinner" aria-hidden="true"></span>
+                                <span>Fetching details...</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <aside class="note-card">
+                        <h3>Run Notes</h3>
+                        <div class="support-list">
+                            <div class="support-item">
+                                <span>Conflict review</span>
+                                <strong>Course and faculty clashes appear below after validation.</strong>
+                            </div>
+                            <div class="support-item">
+                                <span>Storage model</span>
+                                <strong>The generated timetable is treated as stored data for later export.</strong>
+                            </div>
+                            <div class="support-item">
+                                <span>Next step</span>
+                                <strong>Move to the timetable page when you need an Excel download.</strong>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <section class="content-panel report-panel is-hidden" id="dashboardReport">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Output Summary</h2>
+                        <p class="panel-subtext">The report focuses on conflicts and completion status so the dashboard remains uncluttered.</p>
+                    </div>
+                </div>
+
+                <div class="report-grid">
+                    <article class="report-card">
+                        <h3>Course Clashes</h3>
+                        <strong class="report-value" id="courseClashCount">0</strong>
+                        <p id="courseClashText">No course clash data available yet.</p>
+                    </article>
+
+                    <article class="report-card">
+                        <h3>Faculty Clashes</h3>
+                        <strong class="report-value" id="facultyClashCount">0</strong>
+                        <p id="facultyClashText">No faculty clash data available yet.</p>
+                    </article>
+                </div>
+
+                <div class="success-banner">
+                    <div>
+                        <h3>Timetable generated successfully</h3>
+                        <p id="lastRunText">Run the process to create the latest stored timetable.</p>
+                    </div>
+                    <a class="inline-link" href="timetable.html">Open Timetable</a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>
