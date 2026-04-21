@@ -20,22 +20,22 @@
     const RESOURCE_CONFIGS = {
         courses: {
             title: "Courses",
-            description: "Review the active course catalogue that feeds the timetable run. Keep titles, semesters, and teaching categories aligned before generation.",
-            chip: "Academic Catalogue",
-            tableTitle: "Course Registry",
-            searchPlaceholder: "Search by code, title, category, or semester",
-            note: "Course data defines the academic load that the master timetable must satisfy for each semester and section.",
+            description: "Courses used in the timetable.",
+            chip: "Course Data",
+            tableTitle: "Course List",
+            searchPlaceholder: "Search code, course, category, or semester",
+            note: "Check names, semesters, and categories before you run.",
             metrics: function (rows) {
                 return [
-                    { label: "Records", value: rows.length, detail: "Courses prepared for allocation." },
-                    { label: "Semesters", value: uniqueCount(rows, "semester"), detail: "Distinct teaching cohorts covered." },
-                    { label: "Categories", value: uniqueCount(rows, "category"), detail: "Course types reflected in the catalogue." }
+                    { label: "Records", value: rows.length, detail: "Used in the next run." },
+                    { label: "Semesters", value: uniqueCount(rows, "semester"), detail: "Covered in this setup." },
+                    { label: "Categories", value: uniqueCount(rows, "category"), detail: "Mapped course types." }
                 ];
             },
             highlights: [
-                { label: "Check before run", value: "Verify credits and category mapping for every course." },
-                { label: "Scheduling impact", value: "Labs and core theory papers create the widest slot dependency." },
-                { label: "Workflow", value: "Update the catalogue first, then run the master timetable from the dashboard." }
+                { label: "Before run", value: "Check category and semester." },
+                { label: "High impact", value: "Labs need tighter slot planning." },
+                { label: "Next", value: "Go to Dashboard and run." }
             ],
             columns: [
                 { key: "code", label: "Code" },
@@ -57,22 +57,22 @@
         },
         faculty: {
             title: "Faculty",
-            description: "Track faculty members who are available for timetable allocation, along with subject coverage and weekly teaching load.",
-            chip: "Teaching Staff",
-            tableTitle: "Faculty Directory",
-            searchPlaceholder: "Search by faculty ID, name, department, or load",
-            note: "Faculty assignments are matched against course ownership and availability to prevent double-booking during generation.",
+            description: "Faculty available for scheduling.",
+            chip: "Faculty Data",
+            tableTitle: "Faculty List",
+            searchPlaceholder: "Search ID, name, department, or load",
+            note: "Check subjects and weekly load before you run.",
             metrics: function (rows) {
                 return [
-                    { label: "Faculty", value: rows.length, detail: "Instructors available this cycle." },
-                    { label: "Departments", value: uniqueCount(rows, "department"), detail: "Academic units represented." },
-                    { label: "Open Capacity", value: "18 hrs", detail: "Indicative capacity still available." }
+                    { label: "Faculty", value: rows.length, detail: "In the current roster." },
+                    { label: "Departments", value: uniqueCount(rows, "department"), detail: "Represented here." },
+                    { label: "Open Capacity", value: "18 hrs", detail: "Still available." }
                 ];
             },
             highlights: [
-                { label: "Allocation focus", value: "Monitor weekly load before triggering the next run." },
-                { label: "Conflict check", value: "Faculty clashes are validated before the overall timetable is stored." },
-                { label: "Export use", value: "Faculty-wise downloads are generated from this roster and the latest run." }
+                { label: "Load", value: "Review weekly hours." },
+                { label: "Conflicts", value: "Clashes are checked on run." },
+                { label: "Next", value: "Use faculty exports after run." }
             ],
             columns: [
                 { key: "facultyId", label: "Faculty ID" },
@@ -94,22 +94,22 @@
         },
         rooms: {
             title: "Rooms",
-            description: "Monitor teaching spaces, capacities, and room types used by the overall timetable engine during allocation.",
-            chip: "Infrastructure",
-            tableTitle: "Room Allocation Base",
-            searchPlaceholder: "Search by room, type, block, or capacity",
-            note: "Room records help the scheduler place theory classes, labs, and larger cohorts without overbooking shared spaces.",
+            description: "Rooms and capacities used in scheduling.",
+            chip: "Room Data",
+            tableTitle: "Room List",
+            searchPlaceholder: "Search room, type, block, or capacity",
+            note: "Match room type and capacity to each batch.",
             metrics: function (rows) {
                 return [
-                    { label: "Rooms", value: rows.length, detail: "Rooms mapped for scheduling." },
-                    { label: "Lab Spaces", value: countMatching(rows, "type", "Lab"), detail: "Specialised rooms reserved for practical sessions." },
-                    { label: "Largest Capacity", value: "72", detail: "Maximum seating in the current room list." }
+                    { label: "Rooms", value: rows.length, detail: "Available to schedule." },
+                    { label: "Lab Spaces", value: countMatching(rows, "type", "Lab"), detail: "Practical rooms." },
+                    { label: "Largest Capacity", value: "72", detail: "Seats in the largest room." }
                 ];
             },
             highlights: [
-                { label: "Batch fit", value: "Compare capacities with batch strengths before running the timetable." },
-                { label: "Room view", value: "Room-wise exports reflect the latest stored overall timetable only." },
-                { label: "Availability", value: "Inactive rooms should be removed from the scheduling pool." }
+                { label: "Capacity", value: "Check large batches first." },
+                { label: "Exports", value: "Room files use the latest run." },
+                { label: "Inactive", value: "Remove closed rooms." }
             ],
             columns: [
                 { key: "room", label: "Room" },
@@ -129,22 +129,22 @@
         },
         batches: {
             title: "Batches",
-            description: "Manage the student cohorts that receive timetable exports. Each batch keeps its own section, strength, and semester mapping.",
-            chip: "Student Cohorts",
-            tableTitle: "Batch Directory",
-            searchPlaceholder: "Search by batch, program, section, or semester",
-            note: "Batch definitions drive the overall timetable and are reused directly for batch-wise downloads after a successful run.",
+            description: "Student groups included in the timetable.",
+            chip: "Batch Data",
+            tableTitle: "Batch List",
+            searchPlaceholder: "Search batch, program, section, or semester",
+            note: "Batch names, sections, and strength shape the exports.",
             metrics: function (rows) {
                 return [
-                    { label: "Batches", value: rows.length, detail: "Cohorts scheduled in the current cycle." },
-                    { label: "Programs", value: uniqueCount(rows, "program"), detail: "Distinct academic programs covered." },
-                    { label: "Total Strength", value: sumValues(rows, "strength"), detail: "Students represented in timetable planning." }
+                    { label: "Batches", value: rows.length, detail: "Included this cycle." },
+                    { label: "Programs", value: uniqueCount(rows, "program"), detail: "Programs covered." },
+                    { label: "Total Strength", value: sumValues(rows, "strength"), detail: "Students in plan." }
                 ];
             },
             highlights: [
-                { label: "Section control", value: "Large sections should be aligned with room capacity planning." },
-                { label: "Download source", value: "Batch-wise exports are grouped from the latest overall timetable data." },
-                { label: "Recommended check", value: "Validate section names before generation to keep exports clean." }
+                { label: "Sections", value: "Keep names consistent." },
+                { label: "Capacity", value: "Match strength with rooms." },
+                { label: "Exports", value: "Each batch gets its own file." }
             ],
             columns: [
                 { key: "batch", label: "Batch" },
@@ -164,22 +164,22 @@
         },
         categories: {
             title: "Categories",
-            description: "Maintain the teaching categories used to classify courses for allocation logic, reporting, and download grouping.",
-            chip: "Teaching Modes",
-            tableTitle: "Category Mapping",
-            searchPlaceholder: "Search by code, category, mode, or duration",
-            note: "Category rules shape how sessions are distributed across theory, labs, and elective windows in the generated timetable.",
+            description: "Teaching categories used in scheduling.",
+            chip: "Category Rules",
+            tableTitle: "Category List",
+            searchPlaceholder: "Search code, category, mode, or duration",
+            note: "Keep each course mapped to the right category.",
             metrics: function (rows) {
                 return [
-                    { label: "Categories", value: rows.length, detail: "Classification rules available." },
-                    { label: "Lab Enabled", value: countMatching(rows, "mode", "Practical"), detail: "Categories mapped for lab scheduling." },
-                    { label: "Average Duration", value: "1.4 hrs", detail: "Typical session duration across categories." }
+                    { label: "Categories", value: rows.length, detail: "Rules in use." },
+                    { label: "Lab Enabled", value: countMatching(rows, "mode", "Practical"), detail: "Practical categories." },
+                    { label: "Average Duration", value: "1.4 hrs", detail: "Typical session length." }
                 ];
             },
             highlights: [
-                { label: "Course mapping", value: "Every active course should align to one clear teaching category." },
-                { label: "Generation impact", value: "Category duration affects slot selection and room preference." },
-                { label: "Export clarity", value: "Consistent names keep timetable downloads readable for staff and students." }
+                { label: "Mapping", value: "One clear category per course." },
+                { label: "Slots", value: "Duration affects slot choice." },
+                { label: "Names", value: "Clean labels help exports." }
             ],
             columns: [
                 { key: "code", label: "Code" },
@@ -198,22 +198,22 @@
         },
         slots: {
             title: "Slots",
-            description: "Define the available teaching windows that the overall timetable engine can use while arranging sessions through the week.",
-            chip: "Time Windows",
-            tableTitle: "Slot Grid",
-            searchPlaceholder: "Search by slot code, time, pattern, or session type",
-            note: "The slot registry controls the time windows available to all courses, rooms, faculty, and batches during generation.",
+            description: "Time windows used by the timetable.",
+            chip: "Slot Data",
+            tableTitle: "Slot List",
+            searchPlaceholder: "Search slot, time, pattern, or type",
+            note: "These slots are shared by courses, rooms, faculty, and batches.",
             metrics: function (rows) {
                 return [
-                    { label: "Slots", value: rows.length, detail: "Teaching windows available each day." },
-                    { label: "Morning Windows", value: countContaining(rows, "time", "08:"), detail: "Early sessions enabled in the registry." },
-                    { label: "Lab Blocks", value: countMatching(rows, "sessionType", "Lab Block"), detail: "Extended windows for practical work." }
+                    { label: "Slots", value: rows.length, detail: "Daily teaching windows." },
+                    { label: "Morning Windows", value: countContaining(rows, "time", "08:"), detail: "Early-day slots." },
+                    { label: "Lab Blocks", value: countMatching(rows, "sessionType", "Lab Block"), detail: "Extended practical windows." }
                 ];
             },
             highlights: [
-                { label: "Consistency", value: "Slot durations should align with category duration rules." },
-                { label: "Run dependency", value: "The dashboard uses this slot map when building the overall timetable." },
-                { label: "Download views", value: "All timetable exports respect the same stored slot ordering." }
+                { label: "Duration", value: "Match slots to category length." },
+                { label: "Run", value: "Dashboard uses this slot map." },
+                { label: "Exports", value: "Downloads keep the same order." }
             ],
             columns: [
                 { key: "slotCode", label: "Slot" },
@@ -259,22 +259,22 @@
     const TIMETABLE_VIEWS = {
         overall: {
             title: "Overall",
-            description: "Download the combined timetable for every batch using the latest stored master schedule.",
+            description: "Combined file for all batches.",
             filename: "overall-timetable.xls"
         },
         faculty: {
             title: "Faculty-wise",
-            description: "Download grouped timetable sheets for each faculty member from the latest overall timetable.",
+            description: "One file grouped by faculty.",
             filename: "faculty-wise-timetable.xls"
         },
         rooms: {
             title: "Room-wise",
-            description: "Download room allocation sheets organised by teaching space from the stored overall timetable.",
+            description: "One file grouped by room.",
             filename: "room-wise-timetable.xls"
         },
         batches: {
             title: "Batch-wise",
-            description: "Download separate timetable sheets for each batch and section using the generated master schedule.",
+            description: "One file grouped by batch.",
             filename: "batch-wise-timetable.xls"
         }
     };
@@ -317,14 +317,14 @@
 
         sidebar.innerHTML =
             '<div class="sidebar-brand">' +
-            "<small>Admin Console</small>" +
+            "<small>Admin</small>" +
             "<h1>Timetable Generator</h1>" +
             "</div>" +
             '<nav class="sidebar-nav" aria-label="Primary">' +
             navMarkup +
             "</nav>" +
             '<div class="sidebar-footer">' +
-            '<p class="sidebar-note">Review academic data, run the master timetable once, then export the required view.</p>' +
+            '<p class="sidebar-note">Setup, run, download.</p>' +
             '<button class="logout-button" type="button" data-logout-button>Logout</button>' +
             "</div>";
 
@@ -457,7 +457,7 @@
             }
 
             if (context) {
-                context.textContent = "Validating courses, faculty, rooms, batches, categories, and slots before the master timetable is stored.";
+                context.textContent = "Checking setup data...";
             }
 
             setButtonBusy(runButton, true, "Running...");
@@ -470,7 +470,7 @@
                 renderDashboardReport(generation);
 
                 if (context) {
-                    context.textContent = "The latest master timetable is ready. Move to the timetable page to download the view you need.";
+                    context.textContent = "Run complete. Open Timetable to download.";
                 }
             } finally {
                 if (status) {
@@ -494,7 +494,7 @@
         setText("courseClashText", generation.report.courseNote);
         setText("facultyClashText", generation.report.facultyNote);
         setText("lastRunText", "Last generated on " + formatDateTime(generation.generatedAt) + ".");
-        setText("generationStatusLabel", "Latest run available");
+        setText("generationStatusLabel", "Ready");
 
         reportPanel.classList.remove("is-hidden");
     }
@@ -671,7 +671,7 @@
 
         if (!generation) {
             if (chip) {
-                chip.textContent = "Run required";
+                chip.textContent = "No run";
                 chip.classList.remove("is-ready");
             }
 
@@ -680,7 +680,7 @@
             }
 
             if (helper) {
-                helper.textContent = "Generate the master timetable from the dashboard before downloading any export view.";
+                helper.textContent = "Run Dashboard first to enable downloads.";
             }
 
             if (emptyState) {
@@ -695,7 +695,7 @@
         }
 
         if (chip) {
-            chip.textContent = "Latest master timetable ready";
+            chip.textContent = "Ready";
             chip.classList.add("is-ready");
         }
 
@@ -704,7 +704,7 @@
         }
 
         if (helper) {
-            helper.textContent = "Excel export uses the master timetable generated on " + formatDateTime(generation.generatedAt) + ".";
+            helper.textContent = "From run: " + formatDateTime(generation.generatedAt);
         }
 
         if (emptyState) {
@@ -718,17 +718,17 @@
                 {
                     label: "Selected View",
                     value: config.title,
-                    detail: "Prepared from the latest overall timetable."
+                    detail: "From latest run."
                 },
                 {
                     label: "Export Groups",
                     value: groupCount,
-                    detail: activeView === "overall" ? "Single combined export sheet." : "Separate sections in the export file."
+                    detail: activeView === "overall" ? "1 combined sheet." : "Grouped export sheets."
                 },
                 {
                     label: "Last Generated",
                     value: formatDateTime(generation.generatedAt),
-                    detail: "Download reflects the most recent dashboard run."
+                    detail: "Used for downloads."
                 }
             ];
 
@@ -918,8 +918,8 @@
             report: {
                 courseClashes: 2,
                 facultyClashes: 1,
-                courseNote: "2 potential course overlaps were isolated and resolved before allocation.",
-                facultyNote: "1 faculty double-booking was detected during validation and corrected in the final run."
+                courseNote: "2 course overlaps auto-resolved.",
+                facultyNote: "1 faculty clash auto-resolved."
             },
             schedule: MASTER_TIMETABLE_TEMPLATE.slice().sort(compareScheduleEntries)
         };

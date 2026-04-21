@@ -13,18 +13,18 @@
         <main class="app-main">
             <header class="page-header">
                 <div>
-                    <p class="page-kicker">Timetable Downloads</p>
+                    <p class="page-kicker">Step 3 of 3</p>
                     <h1>Timetable</h1>
-                    <p class="page-intro">Choose the timetable type you need and download it as an Excel file. This page always reads from the latest stored overall timetable and never triggers a fresh generation.</p>
+                    <p class="page-intro">Choose a view and download the latest run.</p>
                 </div>
-                <div class="page-chip" id="timetableStatusChip">Run required</div>
+                <div class="page-chip" id="timetableStatusChip">No run</div>
             </header>
 
             <section class="content-panel">
                 <div class="panel-heading">
                     <div>
-                        <h2>Select View</h2>
-                        <p class="panel-subtext">Use the tabs below to switch between overall, faculty-wise, room-wise, and batch-wise exports.</p>
+                        <h2>Download View</h2>
+                        
                     </div>
                 </div>
 
@@ -39,12 +39,12 @@
                     <article class="run-card">
                         <p class="page-kicker">Selected Type</p>
                         <h3 id="selectedTimetableTitle">Overall</h3>
-                        <p id="selectedTimetableDescription">Download the combined timetable for every batch using the latest stored master schedule.</p>
+                        <p id="selectedTimetableDescription">Combined file for all batches.</p>
                     </article>
 
                     <aside class="note-card">
-                        <h3>Download</h3>
-                        <p class="download-helper" id="downloadHelperText">Generate the master timetable from the dashboard before downloading any export view.</p>
+                        <h3>Export</h3>
+                        <p class="download-helper" id="downloadHelperText">Run Dashboard first to enable downloads.</p>
                         <div class="run-actions">
                             <button class="btn-primary btn-large" id="downloadTimetableButton" type="button">Download</button>
                         </div>
@@ -52,15 +52,15 @@
                 </div>
 
                 <div class="empty-state" id="timetableEmptyState">
-                    <p>No timetable export is available yet. Complete the run on the dashboard first, then return here for downloads.</p>
+                    <p>No run yet. Generate from Dashboard first.</p>
                 </div>
             </section>
 
             <section class="content-panel">
                 <div class="panel-heading">
                     <div>
-                        <h2>Export Status</h2>
-                        <p class="panel-subtext">The full timetable is intentionally not rendered on screen. Downloads keep the interface focused and easy to navigate.</p>
+                        <h2>Status</h2>
+                        <p class="panel-subtext">Downloads only. The full grid is not shown here.</p>
                     </div>
                 </div>
 
