@@ -2103,7 +2103,7 @@
                     "<tr>" +
                     config.columns
                         .map(function (column) {
-                            return "<td>" + formatTableCell(getResourceColumnValue(row, column, config), column.badge) + "</td>";
+                            return "<td>" + formatTableCell(getResourceColumnValue(row, column, config), column) + "</td>";
                         })
                         .join("") +
                     (config.showActions === false ? "" : '<td class="actions-cell">' + renderResourceActionButtons(rowIndex) + "</td>") +
@@ -3018,7 +3018,46 @@
         return String(value || "");
     }
 
-    function formatTableCell(value, badgeType) {
+    function formatTableCell(value, column) {
+        if (column && column.key === "batchCategories") {
+            let items = [];
+            if (typeof value === "string") {
+                items = value.split(",").map(function(s) { return s.trim(); }).filter(Boolean);
+            } else if (Array.isArray(value)) {
+                items = value.map(function(item) {
+                    if (item && item.batch && item.category) {
+                        return item.batch + " - " + item.category;
+                    }
+                    return getDisplayValueText([item]);
+                });
+            } else {
+                items = getDisplayValueText(value).split(",").map(function(s) { return s.trim(); }).filter(Boolean);
+            }
+
+            if (items.length > 0) {
+                return '<div class="batch-categories-wrapper">' + items.map(function(item) {
+                    let parts = item.split("-");
+                    let text = escapeHtml(item);
+                    if (parts.length > 1) {
+                         const batch = parts[0].trim();
+                         const cat = parts.slice(1).join("-").trim();
+                         text = '<strong>' + escapeHtml(batch) + '</strong><span class="batch-separator"> - </span><span class="batch-category-light">' + escapeHtml(cat) + '</span>';
+                    } else {
+                         parts = item.split(":");
+                         if (parts.length > 1) {
+                              const batch = parts[0].trim();
+                              const cat = parts.slice(1).join(":").trim();
+                              text = '<strong>' + escapeHtml(batch) + '</strong><span class="batch-separator"> : </span><span class="batch-category-light">' + escapeHtml(cat) + '</span>';
+                         } else {
+                              text = '<strong>' + escapeHtml(item) + '</strong>';
+                         }
+                    }
+                    return '<span class="batch-category-badge">' + text + '</span>';
+                }).join("") + '</div>';
+            }
+        }
+
+        const badgeType = column && column.badge ? column.badge : (typeof column === "string" ? column : null);
         const safeValue = escapeHtml(getDisplayValueText(value));
 
         if (!badgeType) {
