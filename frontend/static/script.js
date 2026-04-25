@@ -447,16 +447,13 @@
     }
 
     function setupDashboardPage() {
-        const courseCount = document.getElementById("courseCount");
-        const facultyCount = document.getElementById("facultyCount");
         const runButton = document.getElementById("runTimetableButton");
 
-        if (!courseCount || !facultyCount || !runButton) {
+        if (!runButton) {
             return;
         }
 
-        courseCount.textContent = RESOURCE_CONFIGS.courses.rows.length;
-        facultyCount.textContent = RESOURCE_CONFIGS.faculty.rows.length;
+        setDashboardStatCounts();
 
         const savedGeneration = getStoredGeneration();
 
@@ -500,17 +497,32 @@
 
     function renderDashboardReport(generation) {
         const reportPanel = document.getElementById("dashboardReport");
+        const report = generation &&
+            generation.report &&
+            Array.isArray(generation.report.conflicts) &&
+            typeof generation.report.totalIssues === "number" &&
+            typeof generation.report.roomConflicts === "number" &&
+            typeof generation.report.slotConflicts === "number"
+            ? generation.report
+            : buildGenerationReport(generation && generation.schedule ? generation.schedule : MASTER_TIMETABLE_TEMPLATE.slice().sort(compareScheduleEntries));
 
-        if (!reportPanel || !generation || !generation.report) {
+        if (!reportPanel || !generation) {
             return;
         }
 
-        setText("courseClashCount", generation.report.courseClashes);
-        setText("facultyClashCount", generation.report.facultyClashes);
-        setText("courseClashText", generation.report.courseNote);
-        setText("facultyClashText", generation.report.facultyNote);
-        setText("lastRunText", "Last generated on " + formatDateTime(generation.generatedAt) + ".");
-        setText("generationStatusLabel", "Ready");
+        setText("courseUsageCount", report.coursesScheduled + " / " + report.totalCourses);
+        setText("courseUsageText", report.courseUsageNote);
+        setText("courseClashCount", report.courseClashes);
+        setText("facultyClashCount", report.facultyClashes);
+        setText("roomConflictCount", report.roomConflicts);
+        setText("slotConflictCount", report.slotConflicts);
+        setText("courseClashText", report.courseNote);
+        setText("facultyClashText", report.facultyNote);
+        setText("roomConflictText", report.roomNote);
+        setText("slotConflictText", report.slotNote);
+        setText("conflictReportSummary", report.conflictSummary);
+        setText("lastRunText", "Last generated on " + formatDateTime(generation.generatedAt) + ". " + report.courseUsageNote);
+        renderConflictReportList(document.getElementById("conflictReportList"), report.conflicts);
 
         reportPanel.classList.remove("is-hidden");
     }
@@ -529,14 +541,12 @@
         setText("[data-resource-description]", config.description);
         setText("[data-resource-chip]", config.chip);
         setText("[data-table-title]", config.tableTitle);
-        setText("[data-resource-note]", config.note);
 
         if (searchInput) {
             searchInput.setAttribute("placeholder", config.searchPlaceholder);
         }
 
         renderMetrics(document.querySelector("[data-resource-metrics]"), config.metrics(config.rows));
-        renderHighlights(document.querySelector("[data-resource-highlights]"), config.highlights);
         renderResourceTable(config, getFilteredResourceRows(config, ""));
         setupResourceAddControls(resourcePage, config, searchInput);
         setupResourceTableActions(resourcePage, config, searchInput);
@@ -2120,27 +2130,6 @@
             .join("");
     }
 
-    function renderHighlights(container, highlights) {
-        if (!container) {
-            return;
-        }
-
-        container.innerHTML = highlights
-            .map(function (item) {
-                return (
-                    '<div class="detail-row">' +
-                    "<span>" +
-                    escapeHtml(item.label) +
-                    "</span>" +
-                    "<strong>" +
-                    escapeHtml(item.value) +
-                    "</strong>" +
-                    "</div>"
-                );
-            })
-            .join("");
-    }
-
     function renderResourceTable(config, rows) {
         const head = document.querySelector("[data-resource-head]");
         const body = document.querySelector("[data-resource-body]");
@@ -2501,17 +2490,410 @@
         return groups;
     }
 
+    function setDashboardStatCounts() {
+        const activeRooms = RESOURCE_CONFIGS.rooms.rows.filter(function (row) {
+            return String(row.status || "Active").toLowerCase() === "active";
+        }).length;
+
+        setText("courseCount", RESOURCE_CONFIGS.courses.rows.length);
+        setText("facultyCount", RESOURCE_CONFIGS.faculty.rows.length);
+        setText("roomCount", activeRooms);
+        setText("batchCount", RESOURCE_CONFIGS.batches.rows.length);
+        setText("categoryCount", RESOURCE_CONFIGS.categories.rows.length);
+        setText("slotCount", RESOURCE_CONFIGS.slots.rows.length);
+    }
+
+    function renderConflictReportList(container, conflicts) {
+        if (!container) {
+            return;
+        }
+
+        if (!Array.isArray(conflicts) || !conflicts.length) {
+            container.innerHTML = '<p class="muted-copy conflict-empty">No unresolved course, faculty, room, or slot conflicts in the latest run.</p>';
+            return;
+        }
+
+        container.innerHTML = conflicts
+            .map(function (conflict) {
+                const title = conflict.title || conflict.courseName || "Conflict";
+                const badge = conflict.badge || conflict.courseCode || "Issue";
+                const meta = conflict.meta || buildLegacyConflictMeta(conflict);
+                const reason = conflict.reason || "Conflict details are unavailable.";
+
+                return (
+                    '<article class="conflict-item">' +
+                    '<div class="conflict-item-top">' +
+                    "<h4>" +
+                    escapeHtml(title) +
+                    "</h4>" +
+                    '<span class="table-pill">' +
+                    escapeHtml(badge) +
+                    "</span>" +
+                    "</div>" +
+                    (meta ? '<p class="conflict-meta">' + escapeHtml(meta) + "</p>" : "") +
+                    "<p>" +
+                    escapeHtml(reason) +
+                    "</p>" +
+                    "</article>"
+                );
+            })
+            .join("");
+    }
+
+    function buildLegacyConflictMeta(conflict) {
+        const facultyLabel = conflict.facultyCode || "Unassigned";
+        const batchLabel = conflict.batchLabel || "Not mapped";
+
+        return "Batch: " + batchLabel + " | Faculty: " + facultyLabel;
+    }
+
     function createGenerationPayload() {
+        const schedule = MASTER_TIMETABLE_TEMPLATE.slice().sort(compareScheduleEntries);
+
         return {
             generatedAt: new Date().toISOString(),
-            report: {
-                courseClashes: 2,
-                facultyClashes: 1,
-                courseNote: "2 course overlaps auto-resolved.",
-                facultyNote: "1 faculty clash auto-resolved."
-            },
-            schedule: MASTER_TIMETABLE_TEMPLATE.slice().sort(compareScheduleEntries)
+            report: buildGenerationReport(schedule),
+            schedule: schedule
         };
+    }
+
+    function buildGenerationReport(schedule) {
+        const courseRows = RESOURCE_CONFIGS.courses.rows;
+        const courseConflicts = courseRows.reduce(function (result, row) {
+            const scheduledEntries = schedule.filter(function (entry) {
+                return entry.course === row.name;
+            });
+            const facultyLabel = String(row.faculty || findFacultyForCourse(row) || "").trim();
+            const batchSelections = normalizeCourseBatchCategories(row);
+            const batchLabel = getConflictBatchLabel(row, batchSelections, scheduledEntries);
+            const requiredSessions = getRequiredSessionsForCourse(row);
+
+            if (!facultyLabel) {
+                result.push({
+                    courseCode: row.code || "N/A",
+                    courseName: row.name || "Unnamed Course",
+                    batchLabel: batchLabel,
+                    facultyCode: "",
+                    reason: "No faculty mapping is available for this course, so conflict-free placement could not be confirmed."
+                });
+                return result;
+            }
+
+            if (!batchSelections.length) {
+                result.push({
+                    courseCode: row.code || "N/A",
+                    courseName: row.name || "Unnamed Course",
+                    batchLabel: batchLabel,
+                    facultyCode: facultyLabel,
+                    reason: "The course is not mapped to any batch yet, so the scheduler has no valid batch context for placement."
+                });
+                return result;
+            }
+
+            if (scheduledEntries.length < requiredSessions) {
+                result.push({
+                    courseCode: row.code || "N/A",
+                    courseName: row.name || "Unnamed Course",
+                    batchLabel: batchLabel,
+                    facultyCode: facultyLabel,
+                    reason: buildCourseConflictReason(row, scheduledEntries.length, requiredSessions)
+                });
+            }
+
+            return result;
+        }, []);
+        const facultyConflicts = buildScheduleOverlapConflicts(schedule, "faculty");
+        const roomConflicts = buildScheduleOverlapConflicts(schedule, "room");
+        const slotConflicts = buildScheduleOverlapConflicts(schedule, "batch");
+        const configuredCourseNames = new Set(courseRows.map(function (row) {
+            return row.name;
+        }));
+        const conflictedCourseNames = new Set(
+            courseConflicts
+                .map(function (conflict) {
+                    return conflict.courseName;
+                })
+                .filter(Boolean)
+        );
+
+        [facultyConflicts, roomConflicts, slotConflicts].forEach(function (conflicts) {
+            conflicts.forEach(function (conflict) {
+                (conflict.entries || []).forEach(function (entry) {
+                    if (configuredCourseNames.has(entry.course)) {
+                        conflictedCourseNames.add(entry.course);
+                    }
+                });
+            });
+        });
+
+        const totalCourses = courseRows.length;
+        const coursesScheduled = Math.max(totalCourses - conflictedCourseNames.size, 0);
+        const totalIssues = courseConflicts.length + facultyConflicts.length + roomConflicts.length + slotConflicts.length;
+        const courseUsageNote = totalIssues
+            ? coursesScheduled + " of " + totalCourses + " configured courses are placed in the timetable without course, faculty, room, or slot conflicts."
+            : "All " + totalCourses + " configured courses are placed in the timetable without course, faculty, room, or slot conflicts.";
+
+        return {
+            totalCourses: totalCourses,
+            coursesScheduled: coursesScheduled,
+            courseUsageNote: courseUsageNote,
+            courseClashes: courseConflicts.length,
+            facultyClashes: facultyConflicts.length,
+            roomConflicts: roomConflicts.length,
+            slotConflicts: slotConflicts.length,
+            courseNote: courseConflicts.length
+                ? formatIssueCount(courseConflicts.length, "course placement issue") + (courseConflicts.length === 1 ? " still needs attention." : " still need attention.")
+                : "No unresolved course placement issues in the latest run.",
+            facultyNote: buildScheduleConflictNote(facultyConflicts.length, "faculty overlap", "No faculty overlaps in the latest run."),
+            roomNote: buildScheduleConflictNote(roomConflicts.length, "room conflict", "No room conflicts in the latest run."),
+            slotNote: buildScheduleConflictNote(slotConflicts.length, "slot conflict", "No slot conflicts in the latest run."),
+            conflictSummary: totalIssues
+                ? formatIssueCount(totalIssues, "issue") + " detected across course placement, faculty, room, and slot checks."
+                : "No unresolved course, faculty, room, or slot conflicts in the latest run.",
+            conflicts: courseConflicts.concat(roomConflicts, slotConflicts, facultyConflicts),
+            totalIssues: totalIssues
+        };
+    }
+
+    function buildScheduleConflictNote(count, label, emptyText) {
+        if (!count) {
+            return emptyText;
+        }
+
+        return formatIssueCount(count, label) + " detected in the latest run.";
+    }
+
+    function formatIssueCount(count, label) {
+        return count + " " + label + (count === 1 ? "" : "s");
+    }
+
+    function buildScheduleOverlapConflicts(schedule, resourceKey) {
+        const groups = {};
+        const conflicts = [];
+
+        schedule.forEach(function (entry) {
+            const resourceValue = String(entry[resourceKey] || "").trim();
+            const dayValue = String(entry.day || "").trim();
+
+            if (!resourceValue || !dayValue) {
+                return;
+            }
+
+            const groupKey = dayValue + "::" + resourceValue;
+
+            if (!groups[groupKey]) {
+                groups[groupKey] = [];
+            }
+
+            groups[groupKey].push(entry);
+        });
+
+        Object.keys(groups).forEach(function (groupKey) {
+            const entries = groups[groupKey].slice().sort(compareEntriesByStartTime);
+
+            for (let index = 0; index < entries.length; index += 1) {
+                for (let nextIndex = index + 1; nextIndex < entries.length; nextIndex += 1) {
+                    const currentEntry = entries[index];
+                    const nextEntry = entries[nextIndex];
+
+                    if (!scheduleEntriesOverlap(currentEntry, nextEntry)) {
+                        if (getEntryTimeRange(nextEntry).start >= getEntryTimeRange(currentEntry).end) {
+                            break;
+                        }
+
+                        continue;
+                    }
+
+                    conflicts.push(createScheduleConflictRecord(resourceKey, currentEntry, nextEntry));
+                }
+            }
+        });
+
+        return conflicts;
+    }
+
+    function compareEntriesByStartTime(a, b) {
+        const dayDifference = DAYS.indexOf(a.day) - DAYS.indexOf(b.day);
+
+        if (dayDifference !== 0) {
+            return dayDifference;
+        }
+
+        return getEntryTimeRange(a).start - getEntryTimeRange(b).start;
+    }
+
+    function getEntryTimeRange(entry) {
+        const slotParts = String(entry.slot || "").split(/\s*-\s*/);
+        const start = timeToMinutes(slotParts[0]);
+        const end = timeToMinutes(slotParts[1]);
+
+        if (end > start) {
+            return {
+                start: start,
+                end: end
+            };
+        }
+
+        const slotRow = RESOURCE_CONFIGS.slots.rows.find(function (row) {
+            return row.time === entry.slot;
+        });
+
+        if (slotRow) {
+            const fallbackParts = String(slotRow.time || "").split(/\s*-\s*/);
+            const fallbackStart = timeToMinutes(fallbackParts[0]);
+            const fallbackEnd = timeToMinutes(fallbackParts[1]);
+
+            return {
+                start: fallbackStart,
+                end: fallbackEnd
+            };
+        }
+
+        return {
+            start: start,
+            end: start
+        };
+    }
+
+    function scheduleEntriesOverlap(firstEntry, secondEntry) {
+        const firstRange = getEntryTimeRange(firstEntry);
+        const secondRange = getEntryTimeRange(secondEntry);
+
+        if (firstRange.end <= firstRange.start || secondRange.end <= secondRange.start) {
+            return firstEntry.slot === secondEntry.slot;
+        }
+
+        return firstRange.start < secondRange.end && secondRange.start < firstRange.end;
+    }
+
+    function createScheduleConflictRecord(resourceKey, firstEntry, secondEntry) {
+        const config = getScheduleConflictConfig(resourceKey);
+        const resourceValue = firstEntry[resourceKey] || secondEntry[resourceKey] || config.fallbackLabel;
+
+        return {
+            type: resourceKey,
+            title: config.titlePrefix + " " + resourceValue,
+            badge: config.badge,
+            meta: buildScheduleConflictMeta(firstEntry, secondEntry, resourceValue, config),
+            reason: buildScheduleConflictReason(resourceKey, firstEntry, secondEntry, resourceValue),
+            entries: [firstEntry, secondEntry]
+        };
+    }
+
+    function getScheduleConflictConfig(resourceKey) {
+        if (resourceKey === "room") {
+            return {
+                badge: "Room",
+                titlePrefix: "Room conflict in",
+                fallbackLabel: "room",
+                entityLabel: "Room"
+            };
+        }
+
+        if (resourceKey === "faculty") {
+            return {
+                badge: "Faculty",
+                titlePrefix: "Faculty clash for",
+                fallbackLabel: "faculty",
+                entityLabel: "Faculty"
+            };
+        }
+
+        return {
+            badge: "Slot",
+            titlePrefix: "Slot conflict for",
+            fallbackLabel: "batch",
+            entityLabel: "Batch"
+        };
+    }
+
+    function buildScheduleConflictMeta(firstEntry, secondEntry, resourceValue, config) {
+        const windows = Array.from(new Set([firstEntry.slot, secondEntry.slot].filter(Boolean))).join(" and ");
+
+        return firstEntry.day + " | " + config.entityLabel + ": " + resourceValue + " | " + windows;
+    }
+
+    function buildScheduleConflictReason(resourceKey, firstEntry, secondEntry, resourceValue) {
+        if (resourceKey === "room") {
+            return firstEntry.course + " (" + firstEntry.batch + ") and " + secondEntry.course + " (" + secondEntry.batch + ") overlap in room " + resourceValue + ".";
+        }
+
+        if (resourceKey === "faculty") {
+            return firstEntry.course + " and " + secondEntry.course + " overlap for faculty member " + resourceValue + ".";
+        }
+
+        return firstEntry.course + " and " + secondEntry.course + " overlap in the same batch slot for " + resourceValue + ".";
+    }
+
+    function getConflictBatchLabel(row, batchSelections, scheduledEntries) {
+        const labels = batchSelections.length
+            ? batchSelections.map(function (selection) {
+                return selection.batch;
+            })
+            : scheduledEntries.map(function (entry) {
+                return entry.batch;
+            });
+        const uniqueLabels = Array.from(new Set(labels.filter(Boolean)));
+
+        if (uniqueLabels.length) {
+            return uniqueLabels.join(", ");
+        }
+
+        return row.semester || "Not mapped";
+    }
+
+    function getRequiredSessionsForCourse(row) {
+        const lectureHours = parseNumericValue(row.lectureHours);
+        const tutorialHours = parseNumericValue(row.tutorialHours);
+        const labHours = parseNumericValue(row.labHours);
+        const explicitSessions = lectureHours + tutorialHours + normalizeLabHoursToBlocks(labHours);
+
+        if (explicitSessions > 0) {
+            return explicitSessions;
+        }
+
+        return getCourseCategoryText(row).includes("lab") ? 1 : 3;
+    }
+
+    function normalizeLabHoursToBlocks(labHours) {
+        if (!labHours) {
+            return 0;
+        }
+
+        return Math.max(1, Math.ceil(labHours / 2));
+    }
+
+    function parseNumericValue(value) {
+        const normalized = String(value || "").replace(/[^0-9.]/g, "");
+        const parsedValue = Number.parseFloat(normalized);
+
+        return Number.isFinite(parsedValue) ? parsedValue : 0;
+    }
+
+    function getCourseCategoryText(row) {
+        const selectionLabels = normalizeCourseBatchCategories(row).map(function (selection) {
+            return selection.category;
+        });
+
+        return [row.category]
+            .concat(selectionLabels)
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+    }
+
+    function buildCourseConflictReason(row, scheduledCount, requiredSessions) {
+        const isLabCourse = getCourseCategoryText(row).includes("lab");
+
+        if (scheduledCount === 0) {
+            return isLabCourse
+                ? "No compatible lab block could be placed. The required lab windows still conflict with the current room and slot availability."
+                : "No compatible lecture slot could be placed. The required teaching windows still conflict with the current batch, faculty, and slot availability.";
+        }
+
+        return isLabCourse
+            ? "Only " + scheduledCount + " of " + requiredSessions + " required lab block(s) could be placed. The remaining block(s) still conflict with the current lab-room and long-slot availability."
+            : "Only " + scheduledCount + " of " + requiredSessions + " required session(s) could be placed. The remaining session(s) still conflict with the current batch, faculty, and slot availability.";
     }
 
     function compareScheduleEntries(a, b) {
