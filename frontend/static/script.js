@@ -77,36 +77,29 @@
             description: "Faculty available for scheduling.",
             chip: "Faculty Data",
             tableTitle: "Faculty List",
-            searchPlaceholder: "Search ID, name, department, or load",
-            note: "Check subjects and weekly load before you run.",
+            searchPlaceholder: "Search faculty or load",
+            note: "Use faculty email and weekly load only.",
             metrics: function (rows) {
                 return [
-                    { label: "Faculty", value: rows.length, detail: "In the current roster." },
-                    { label: "Departments", value: uniqueCount(rows, "department"), detail: "Represented here." },
-                    { label: "Open Capacity", value: "18 hrs", detail: "Still available." }
+                    { label: "Faculty", value: rows.length, detail: "In the current roster." }
                 ];
             },
-            highlights: [
-                { label: "Load", value: "Review weekly hours." },
-                { label: "Conflicts", value: "Clashes are checked on run." },
-                { label: "Next", value: "Use faculty exports after run." }
-            ],
+            highlights: [],
             columns: [
                 { key: "facultyId", label: "Faculty ID" },
                 { key: "name", label: "Name" },
-                { key: "department", label: "Department", badge: "accent" },
-                { key: "subjects", label: "Subject Coverage" },
+                { key: "email", label: "Email" },
                 { key: "load", label: "Weekly Load", badge: "secondary" }
             ],
             rows: [
-                { facultyId: "FAC-01", name: "Dr. Meera Shah", department: "ICT", subjects: "Mathematics, Data Structures", load: "14 hrs" },
-                { facultyId: "FAC-02", name: "Prof. Kunal Desai", department: "ICT", subjects: "Database Systems, Labs", load: "16 hrs" },
-                { facultyId: "FAC-03", name: "Dr. Nidhi Trivedi", department: "ICT", subjects: "Operating Systems", load: "12 hrs" },
-                { facultyId: "FAC-04", name: "Prof. Aditi Rao", department: "ICT", subjects: "Software Engineering", load: "15 hrs" },
-                { facultyId: "FAC-05", name: "Dr. Rahul Menon", department: "ICT", subjects: "Machine Learning", load: "10 hrs" },
-                { facultyId: "FAC-06", name: "Prof. Hiral Patel", department: "ICT", subjects: "Network Security", load: "11 hrs" },
-                { facultyId: "FAC-07", name: "Dr. Sagar Joshi", department: "Science", subjects: "Physics", load: "13 hrs" },
-                { facultyId: "FAC-08", name: "Prof. Neha Vyas", department: "Communication", subjects: "Professional Communication", load: "9 hrs" }
+                { facultyId: "FAC-01", name: "Dr. Meera Shah", email: "meera.shah@college.edu", load: "18 hrs" },
+                { facultyId: "FAC-02", name: "Prof. Kunal Desai", email: "kunal.desai@college.edu", load: "16 hrs" },
+                { facultyId: "FAC-03", name: "Dr. Nidhi Trivedi", email: "nidhi.trivedi@college.edu", load: "12 hrs" },
+                { facultyId: "FAC-04", name: "Prof. Aditi Rao", email: "aditi.rao@college.edu", load: "15 hrs" },
+                { facultyId: "FAC-05", name: "Dr. Rahul Menon", email: "rahul.menon@college.edu", load: "10 hrs" },
+                { facultyId: "FAC-06", name: "Prof. Hiral Patel", email: "hiral.patel@college.edu", load: "11 hrs" },
+                { facultyId: "FAC-07", name: "Dr. Sagar Joshi", email: "sagar.joshi@college.edu", load: "13 hrs" },
+                { facultyId: "FAC-08", name: "Prof. Neha Vyas", email: "neha.vyas@college.edu", load: "9 hrs" }
             ]
         },
         rooms: {
@@ -114,34 +107,26 @@
             description: "Rooms and capacities used in scheduling.",
             chip: "Room Data",
             tableTitle: "Room List",
-            searchPlaceholder: "Search room, type, block, or capacity",
-            note: "Match room type and capacity to each batch.",
+            searchPlaceholder: "Search room or capacity",
+            note: "List only classrooms and capacities.",
             metrics: function (rows) {
                 return [
                     { label: "Rooms", value: rows.length, detail: "Available to schedule." },
-                    { label: "Lab Spaces", value: countMatching(rows, "type", "Lab"), detail: "Practical rooms." },
                     { label: "Largest Capacity", value: "72", detail: "Seats in the largest room." }
                 ];
             },
-            highlights: [
-                { label: "Capacity", value: "Check large batches first." },
-                { label: "Exports", value: "Room files use the latest run." },
-                { label: "Inactive", value: "Remove closed rooms." }
-            ],
+            highlights: [],
             columns: [
                 { key: "room", label: "Room" },
-                { key: "type", label: "Type", badge: "accent" },
-                { key: "capacity", label: "Capacity" },
-                { key: "block", label: "Block" },
-                { key: "status", label: "Status", badge: "secondary" }
+                { key: "capacity", label: "Capacity" }
             ],
             rows: [
-                { room: "A-101", type: "Theory", capacity: "60", block: "Block A", status: "Active" },
-                { room: "A-103", type: "Theory", capacity: "48", block: "Block A", status: "Active" },
-                { room: "B-204", type: "Theory", capacity: "72", block: "Block B", status: "Active" },
-                { room: "LAB-201", type: "Lab", capacity: "36", block: "Tech Wing", status: "Active" },
-                { room: "LAB-203", type: "Lab", capacity: "32", block: "Tech Wing", status: "Active" },
-                { room: "C-110", type: "Seminar", capacity: "40", block: "Block C", status: "Reserve" }
+                { room: "A-101", capacity: "60" },
+                { room: "A-103", capacity: "48" },
+                { room: "B-204", capacity: "72" },
+                { room: "LAB-201", capacity: "36" },
+                { room: "LAB-203", capacity: "32" },
+                { room: "C-110", capacity: "40" }
             ]
         },
         batches: {
@@ -149,7 +134,7 @@
             description: "Student groups included in the timetable.",
             chip: "Batch Data",
             tableTitle: "Batch List",
-            searchPlaceholder: "Search batch, program, section, or semester",
+            searchPlaceholder: "Search branch, program, section, or semester",
             note: "Batch names, sections, and strength shape the exports.",
             metrics: function (rows) {
                 return [
@@ -164,19 +149,18 @@
                 { label: "Exports", value: "Each batch gets its own file." }
             ],
             columns: [
-                { key: "batch", label: "Batch" },
                 { key: "program", label: "Program" },
+                { key: "branch", label: "Branch" },
                 { key: "semester", label: "Semester", badge: "secondary" },
-                { key: "section", label: "Section", badge: "accent" },
-                { key: "strength", label: "Strength" }
+                { key: "section", label: "Section", badge: "accent" }
             ],
             rows: [
-                { batch: "ICT Sem 2 A", program: "B.Tech ICT", semester: "Sem 2", section: "A", strength: "62" },
-                { batch: "ICT Sem 2 B", program: "B.Tech ICT", semester: "Sem 2", section: "B", strength: "58" },
-                { batch: "ICT Sem 4 A", program: "B.Tech ICT", semester: "Sem 4", section: "A", strength: "54" },
-                { batch: "ICT Sem 4 B", program: "B.Tech ICT", semester: "Sem 4", section: "B", strength: "51" },
-                { batch: "ICT Sem 6 A", program: "B.Tech ICT", semester: "Sem 6", section: "A", strength: "47" },
-                { batch: "ICT Sem 6 B", program: "B.Tech ICT", semester: "Sem 6", section: "B", strength: "45" }
+                { batch: "ICT Sem 2 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 2", section: "A", strength: "62" },
+                { batch: "ICT Sem 2 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 2", section: "B", strength: "58" },
+                { batch: "ICT Sem 4 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 4", section: "A", strength: "54" },
+                { batch: "ICT Sem 4 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 4", section: "B", strength: "51" },
+                { batch: "ICT Sem 6 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 6", section: "A", strength: "47" },
+                { batch: "ICT Sem 6 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 6", section: "B", strength: "45" }
             ]
         },
         categories: {
@@ -184,33 +168,23 @@
             description: "Teaching categories used in scheduling.",
             chip: "Category Rules",
             tableTitle: "Category List",
-            searchPlaceholder: "Search code, category, mode, or duration",
-            note: "Keep each course mapped to the right category.",
+            searchPlaceholder: "Search category",
+            note: "Enter only the category name.",
             metrics: function (rows) {
                 return [
-                    { label: "Categories", value: rows.length, detail: "Rules in use." },
-                    { label: "Lab Enabled", value: countMatching(rows, "mode", "Practical"), detail: "Practical categories." },
-                    { label: "Average Duration", value: "1.4 hrs", detail: "Typical session length." }
+                    { label: "Categories", value: rows.length, detail: "Rules in use." }
                 ];
             },
-            highlights: [
-                { label: "Mapping", value: "One clear category per course." },
-                { label: "Slots", value: "Duration affects slot choice." },
-                { label: "Names", value: "Clean labels help exports." }
-            ],
+            highlights: [],
             columns: [
-                { key: "code", label: "Code" },
-                { key: "name", label: "Category" },
-                { key: "mode", label: "Mode", badge: "accent" },
-                { key: "duration", label: "Duration" },
-                { key: "priority", label: "Priority", badge: "secondary" }
+                { key: "name", label: "Category" }
             ],
             rows: [
-                { code: "CT", name: "Core Theory", mode: "Lecture", duration: "1 hr", priority: "High" },
-                { code: "LB", name: "Lab", mode: "Practical", duration: "2 hrs", priority: "High" },
-                { code: "EL", name: "Elective", mode: "Lecture", duration: "1 hr", priority: "Medium" },
-                { code: "SK", name: "Skill Module", mode: "Workshop", duration: "1 hr", priority: "Medium" },
-                { code: "PR", name: "Professional", mode: "Lecture", duration: "1 hr", priority: "Low" }
+                { name: "Core Theory" },
+                { name: "Lab" },
+                { name: "Elective" },
+                { name: "Skill Module" },
+                { name: "Professional" }
             ]
         },
         slots: {
@@ -218,35 +192,28 @@
             description: "Time windows used by the timetable.",
             chip: "Slot Data",
             tableTitle: "Slot List",
-            searchPlaceholder: "Search slot, time, pattern, or type",
-            note: "These slots are shared by courses, rooms, faculty, and batches.",
+            searchPlaceholder: "Search slot name or time",
+            note: "Define time slots with names and day of week.",
             metrics: function (rows) {
                 return [
-                    { label: "Slots", value: rows.length, detail: "Daily teaching windows." },
-                    { label: "Morning Windows", value: countContaining(rows, "time", "08:"), detail: "Early-day slots." },
-                    { label: "Lab Blocks", value: countMatching(rows, "sessionType", "Lab Block"), detail: "Extended practical windows." }
+                    { label: "Slots", value: rows.length, detail: "Daily teaching windows." }
                 ];
             },
-            highlights: [
-                { label: "Duration", value: "Match slots to category length." },
-                { label: "Run", value: "Dashboard uses this slot map." },
-                { label: "Exports", value: "Downloads keep the same order." }
-            ],
+            highlights: [],
             columns: [
-                { key: "slotCode", label: "Slot" },
-                { key: "time", label: "Time" },
-                { key: "dayPattern", label: "Day Pattern", badge: "accent" },
-                { key: "sessionType", label: "Session Type", badge: "secondary" },
-                { key: "remarks", label: "Remarks" }
+                { key: "slotName", label: "Slot Name" },
+                { key: "startTime", label: "Start Time" },
+                { key: "endTime", label: "End Time" },
+                { key: "dayOfWeek", label: "Day of the Week" }
             ],
             rows: [
-                { slotCode: "S1", time: "08:30 - 09:20", dayPattern: "Mon-Fri", sessionType: "Lecture", remarks: "Regular morning window" },
-                { slotCode: "S2", time: "09:25 - 10:15", dayPattern: "Mon-Fri", sessionType: "Lecture", remarks: "Regular morning window" },
-                { slotCode: "S3", time: "10:30 - 11:20", dayPattern: "Mon-Fri", sessionType: "Lecture", remarks: "Post-break window" },
-                { slotCode: "S4", time: "11:25 - 12:15", dayPattern: "Mon-Fri", sessionType: "Lecture", remarks: "Pre-lunch window" },
-                { slotCode: "S5", time: "13:00 - 13:50", dayPattern: "Mon-Fri", sessionType: "Lecture", remarks: "Afternoon theory window" },
-                { slotCode: "S6", time: "14:00 - 15:50", dayPattern: "Mon-Fri", sessionType: "Lab Block", remarks: "Extended practical session" },
-                { slotCode: "S7", time: "16:00 - 16:50", dayPattern: "Mon-Fri", sessionType: "Lecture", remarks: "Reserve window" }
+                { slotName: "Slot-1", startTime: "08:30", endTime: "09:20", dayOfWeek: "Monday" },
+                { slotName: "Slot-2", startTime: "09:25", endTime: "10:15", dayOfWeek: "Monday" },
+                { slotName: "Slot-3", startTime: "10:30", endTime: "11:20", dayOfWeek: "Monday" },
+                { slotName: "Slot-4", startTime: "11:25", endTime: "12:15", dayOfWeek: "Monday" },
+                { slotName: "Slot-5", startTime: "13:00", endTime: "13:50", dayOfWeek: "Monday" },
+                { slotName: "Slot-6", startTime: "14:00", endTime: "15:50", dayOfWeek: "Monday" },
+                { slotName: "Slot-7", startTime: "16:00", endTime: "16:50", dayOfWeek: "Monday" }
             ]
         }
     };
@@ -771,8 +738,8 @@
                 fields: [
                     { key: "facultyCode", label: "Faculty Code", type: "text", required: true },
                     { key: "facultyName", label: "Faculty Name", type: "text", required: true },
-                    { key: "maximumLoad", label: "Maximum Load", type: "text", inputMode: "decimal", required: true, numeric: true },
-                    { key: "unavailableSlotSelections", label: "Unavailable Slots", type: "day-slot-selector", required: false }
+                    { key: "facultyEmail", label: "Faculty Email", type: "text", required: true },
+                    { key: "maximumLoad", label: "Maximum Load", type: "text", inputMode: "decimal", required: true, numeric: true }
                 ],
                 toRow: createFacultyResourceRow
             };
@@ -795,10 +762,10 @@
                 id: "batches",
                 title: "Add Batch",
                 fields: [
-                    { key: "program", label: "Program", type: "select", options: getUniqueResourceValues("batches", "program"), required: true },
-                    { key: "branch", label: "Branch", type: "select", options: getBatchBranchOptions(), required: true },
-                    { key: "semester", label: "Semester", type: "select", options: getUniqueResourceValues("batches", "semester"), required: true },
-                    { key: "section", label: "Section", type: "select", options: getUniqueResourceValues("batches", "section"), required: true }
+                    { key: "program", label: "Program", type: "text", required: true },
+                    { key: "branch", label: "Branch", type: "text", required: true },
+                    { key: "semester", label: "Semester", type: "text", inputMode: "numeric", required: true, numeric: true },
+                    { key: "section", label: "Section", type: "text", required: true }
                 ],
                 toRow: createBatchResourceRow
             };
@@ -820,6 +787,7 @@
                 id: "slots",
                 title: "Add Slot",
                 fields: [
+                    { key: "slotName", label: "Slot Name", type: "text", required: true },
                     { key: "dayOfWeek", label: "Day of the Week", type: "select", options: WEEK_DAYS, required: true },
                     { key: "startTime", label: "Start Time", type: "time", required: true },
                     { key: "endTime", label: "End Time", type: "time", required: true }
@@ -1300,8 +1268,8 @@
             return {
                 facultyCode: row.facultyId || "",
                 facultyName: row.name || "",
-                maximumLoad: row.maximumLoad || stripHourSuffix(row.load),
-                unavailableSlotSelections: normalizeFacultyUnavailableSlots(row)
+                facultyEmail: row.email || "",
+                maximumLoad: row.maximumLoad || stripHourSuffix(row.load)
             };
         }
 
@@ -1328,12 +1296,11 @@
         }
 
         if (resourceId === "slots") {
-            const times = splitSlotTime(row);
-
             return {
+                slotName: row.slotName || "",
                 dayOfWeek: row.dayOfWeek || normalizeDayPattern(row.dayPattern),
-                startTime: row.startTime || times.startTime,
-                endTime: row.endTime || times.endTime
+                startTime: row.startTime || (typeof row.time === "string" ? row.time.split(" - ")[0] : ""),
+                endTime: row.endTime || (typeof row.time === "string" ? row.time.split(" - ")[1] : "")
             };
         }
 
@@ -1722,7 +1689,7 @@
         }
 
         if (resourcePage === "slots") {
-            return row.slotCode || row.time || "this slot";
+            return row.slotName || "this slot";
         }
 
         return "this entry";
@@ -1785,21 +1752,12 @@
     }
 
     function createFacultyResourceRow(values, existingRow) {
-        const unavailableSlots = values.unavailableSlotSelections || [];
-        const unavailableText = unavailableSlots.length
-            ? "Unavailable: " + unavailableSlots.map(function (selection) {
-                return selection.day + " " + normalizeSlotSeparator(selection.time);
-            }).join(", ")
-            : existingRow && existingRow.subjects ? existingRow.subjects : "To be assigned";
-
         return {
             facultyId: values.facultyCode,
             name: values.facultyName,
-            department: existingRow && existingRow.department ? existingRow.department : "Unassigned",
-            subjects: unavailableText,
+            email: values.facultyEmail || "",
             load: formatHourLoad(values.maximumLoad),
-            maximumLoad: values.maximumLoad,
-            unavailableSlots: unavailableSlots.slice()
+            maximumLoad: values.maximumLoad
         };
     }
 
@@ -1826,21 +1784,13 @@
 
     function createCategoryResourceRow(values, existingRow) {
         return {
-            code: existingRow && existingRow.code ? existingRow.code : createCategoryCode(values.categoryName),
-            name: values.categoryName,
-            mode: existingRow && existingRow.mode ? existingRow.mode : "Lecture",
-            duration: existingRow && existingRow.duration ? existingRow.duration : "1 hr",
-            priority: existingRow && existingRow.priority ? existingRow.priority : "Medium"
+            name: values.categoryName
         };
     }
 
     function createSlotResourceRow(values, existingRow) {
         return {
-            slotCode: existingRow && existingRow.slotCode ? existingRow.slotCode : getNextSlotCode(),
-            time: formatSlotTime(values.startTime, values.endTime),
-            dayPattern: values.dayOfWeek,
-            sessionType: existingRow && existingRow.sessionType ? existingRow.sessionType : "Lecture",
-            remarks: existingRow && existingRow.remarks ? existingRow.remarks : "Added manually",
+            slotName: values.slotName,
             dayOfWeek: values.dayOfWeek,
             startTime: values.startTime,
             endTime: values.endTime
@@ -1903,7 +1853,7 @@
                 }
 
                 const slotRow = RESOURCE_CONFIGS.slots.rows.find(function (entry) {
-                    return entry.slotCode === slot;
+                    return entry.slotName === slot;
                 });
 
                 if (!slotRow) {
@@ -1911,8 +1861,8 @@
                 }
 
                 return {
-                    day: normalizeDayPattern(slotRow.dayPattern),
-                    time: slotRow.time
+                    day: slotRow.dayOfWeek,
+                    time: slotRow.startTime + " - " + slotRow.endTime
                 };
             })
             .filter(Boolean);
@@ -2022,7 +1972,7 @@
     }
 
     function getSlotOptionLabel(slot) {
-        return slot.slotCode + " | " + slot.time + " | " + slot.dayPattern;
+        return slot.slotName + " | " + slot.startTime + " - " + slot.endTime + " | " + slot.dayOfWeek;
     }
 
     function getUniqueSlotTimes() {
@@ -2147,7 +2097,7 @@
                     return "<th>" + escapeHtml(column.label) + "</th>";
                 })
                 .join("") +
-            '<th class="actions-header">Actions</th>' +
+            (config.showActions === false ? "" : '<th class="actions-header">Actions</th>') +
             "</tr>";
 
         body.innerHTML = rows
@@ -2161,9 +2111,7 @@
                             return "<td>" + formatTableCell(row[column.key], column.badge) + "</td>";
                         })
                         .join("") +
-                    '<td class="actions-cell">' +
-                    renderResourceActionButtons(rowIndex) +
-                    "</td>" +
+                    (config.showActions === false ? "" : '<td class="actions-cell">' + renderResourceActionButtons(rowIndex) + "</td>") +
                     "</tr>"
                 );
             })

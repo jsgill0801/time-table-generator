@@ -13,14 +13,11 @@
         <main class="app-main">
             <header class="page-header">
                 <div>
-                    <p class="page-kicker">Setup</p>
                     <h1 data-resource-title></h1>
                     <p class="page-intro" data-resource-description></p>
                 </div>
                 <div class="page-chip" data-resource-chip></div>
             </header>
-
-            <section class="stats-grid stats-grid-compact" data-resource-metrics></section>
 
             <section class="panel-grid">
                 <article class="content-panel">
@@ -47,6 +44,29 @@
                         <p>No matching records.</p>
                     </div>
                 </article>
+
+                <aside class="content-panel">
+                    <div class="import-panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Import Faculty</h2>
+                                <p class="panel-subtext">Upload a CSV file containing faculty members using the exact columns below.</p>
+                            </div>
+                        </div>
+                        <form class="import-form" action="/api/v1/import/faculties" method="post" enctype="multipart/form-data">
+                            <label class="form-field">
+                                <span>Select CSV file</span>
+                                <input type="file" name="file" accept=".csv,text/csv" required>
+                            </label>
+                            <button class="modal-submit-button" type="submit">Upload CSV</button>
+                        </form>
+                        <p class="import-note">Required columns: <strong>faculty_code, faculty_name, faculty_email, max_load</strong></p>
+                        <pre class="csv-example">faculty_code,faculty_name,faculty_email,max_load
+PD,Dr. Priya Desai,pd@college.edu,18
+AV,Prof. Amit Verma,av@college.edu,16
+SS,Dr. Sneha Sharma,ss@college.edu,14</pre>
+                    </div>
+                </aside>
             </section>
         </main>
     </div>

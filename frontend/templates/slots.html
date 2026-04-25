@@ -13,14 +13,11 @@
         <main class="app-main">
             <header class="page-header">
                 <div>
-                    <p class="page-kicker">Setup</p>
                     <h1 data-resource-title></h1>
                     <p class="page-intro" data-resource-description></p>
                 </div>
                 <div class="page-chip" data-resource-chip></div>
             </header>
-
-            <section class="stats-grid stats-grid-compact" data-resource-metrics></section>
 
             <section class="panel-grid">
                 <article class="content-panel">
@@ -47,6 +44,29 @@
                         <p>No matching records.</p>
                     </div>
                 </article>
+
+                <aside class="content-panel">
+                    <div class="import-panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Import Slots</h2>
+                                <p class="panel-subtext">Upload a CSV file containing slot definitions using the exact columns below.</p>
+                            </div>
+                        </div>
+                        <form class="import-form" action="/api/v1/import/slots" method="post" enctype="multipart/form-data">
+                            <label class="form-field">
+                                <span>Select CSV file</span>
+                                <input type="file" name="file" accept=".csv,text/csv" required>
+                            </label>
+                            <button class="modal-submit-button" type="submit">Upload CSV</button>
+                        </form>
+                        <p class="import-note">Required columns: <strong>day_of_week, start_time, end_time, slot_name</strong></p>
+                        <pre class="csv-example">day_of_week,start_time,end_time,slot_name
+Monday,08:00,09:00,Slot-1
+Tuesday,09:00,10:00,Slot-2
+Wednesday,11:00,12:00,Slot-3</pre>
+                    </div>
+                </aside>
             </section>
         </main>
     </div>
