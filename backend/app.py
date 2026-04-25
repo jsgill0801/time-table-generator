@@ -6,7 +6,7 @@ enables CORS, sets up error handlers, and initialises the
 database tables.
 """
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 
 from backend.config import DevelopmentConfig
@@ -47,6 +47,30 @@ def create_app(config_class=DevelopmentConfig):
     # Register global error handlers
     # ------------------------------------------------------------------
     register_error_handlers(app)
+
+    # ------------------------------------------------------------------
+    # Root welcome route
+    # ------------------------------------------------------------------
+    @app.route("/")
+    def index():
+        return jsonify({
+            "application": "Time Table Generator API",
+            "version": "1.0.0",
+            "status": "running",
+            "endpoints": {
+                "auth": "/api/v1/auth  (signup, login, logout)",
+                "courses": "/api/v1/courses",
+                "batches": "/api/v1/batches",
+                "faculties": "/api/v1/faculties",
+                "classrooms": "/api/v1/classrooms",
+                "slots": "/api/v1/slots",
+                "import": "/api/v1/import",
+                "generate": "/api/v1/generate",
+                "timetable": "/api/v1/timetable",
+                "export": "/api/v1/export  (download, preview)",
+                "data": "/api/v1/data",
+            },
+        })
 
     # ------------------------------------------------------------------
     # Create database tables on first launch

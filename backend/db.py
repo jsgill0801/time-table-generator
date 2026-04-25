@@ -3,9 +3,15 @@ Database connection module.
 
 Sets up SQLAlchemy engine, session factory, and the
 declarative Base class that all ORM models inherit from.
+
+Supports both PostgreSQL and SQLite:
+    - PostgreSQL: set DATABASE_URL=postgresql://... in .env
+    - SQLite:     set DATABASE_URL=sqlite:///timetable.db in .env
+
+For PostgreSQL, uses the psycopg (v3) driver automatically.
 """
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 from backend.config import Config
@@ -20,11 +26,34 @@ Base = declarative_base()
 # -----------------------------------------------------------------
 # Engine & session factory
 # -----------------------------------------------------------------
-engine = create_engine(
-    Config.DATABASE_URL,
-    echo=Config.DEBUG if hasattr(Config, "DEBUG") else False,
-    pool_pre_ping=True,  # verify connections before use
-)
+_db_url = Config.DATABASE_URL
+
+# Auto-switch to psycopg (v3) driver for PostgreSQL.
+# psycopg2 does not support Python 3.14, so we use psycopg (v3).
+# "postgresql://" defaults to psycopg2; "postgresql+psycopg://" uses v3.
+if _db_url.startswith("postgresql://"):
+    _db_url = _db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+_is_sqlite = _db_url.startswith("sqlite")
+
+# SQLite does not support pool_pre_ping the same way
+engine_kwargs = {
+    "echo": Config.DEBUG if hasattr(Config, "DEBUG") else False,
+}
+
+if not _is_sqlite:
+    engine_kwargs["pool_pre_ping"] = True
+
+engine = create_engine(_db_url, **engine_kwargs)
+
+# SQLite needs WAL mode and foreign keys enabled
+if _is_sqlite:
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute("PRAGMA foreign_keys=ON;")
+        cursor.close()
 
 SessionLocal = sessionmaker(
     bind=engine,

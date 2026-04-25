@@ -34,3 +34,9 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
+
+# SQLite databases
+*.db
+
+# Flask session files
+flask_session/
