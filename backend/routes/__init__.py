@@ -16,6 +16,8 @@ from backend.routes.batch_course_routes import batch_course_bp
 from backend.routes.faculty_course_routes import faculty_course_bp
 from backend.routes.import_routes import import_bp
 from backend.routes.generate_routes import generate_bp
+from backend.routes.timetable_routes import timetable_bp
+from backend.routes.data_routes import data_bp
 
 
 def register_blueprints(app):
@@ -32,3 +34,5 @@ def register_blueprints(app):
     app.register_blueprint(faculty_course_bp, url_prefix="/api/v1/faculty-courses")
     app.register_blueprint(import_bp, url_prefix="/api/v1/import")
     app.register_blueprint(generate_bp, url_prefix="/api/v1/generate")
+    app.register_blueprint(timetable_bp, url_prefix="/api/v1/timetable")
+    app.register_blueprint(data_bp, url_prefix="/api/v1/data")

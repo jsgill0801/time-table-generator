@@ -1,0 +1,13 @@
+course_code,program,branch,semester,section,category,students_enrolled
+HM106,BTech,ICT,4,A,Humanities,55
+HM106,BTech,ICT,4,B,Humanities,50
+IT205,BTech,ICT,4,A,Core,55
+IT205,BTech,ICT,4,B,Core,50
+MA206,BTech,ICT,4,A,Core,55
+MA206,BTech,ICT,4,B,Core,50
+SC205,BTech,ICT,4,A,Core,55
+EL203,BTech,ICT,4,B,Core,50
+IT207,BTech,CS,4,,Core,80
+HM108,BTech,CS,4,,Humanities,80
+CS201,BTech,CS,4,,Core,80
+MA206,BTech,CS,4,,Core,80

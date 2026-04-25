@@ -60,6 +60,9 @@ class ValidationService:
         errors.extend(self.check_slot_supply())
         errors.extend(self.check_faculty_load_feasibility())
         errors.extend(self.check_batch_courses_exist())
+        errors.extend(self.check_slot_overlaps())
+        errors.extend(self.check_batch_slot_feasibility())
+        errors.extend(self.check_duplicate_batch_courses())
 
         return errors
 
@@ -282,5 +285,129 @@ class ValidationService:
                 "No classrooms found. "
                 "Please add classroom data before generating."
             )
+
+        return errors
+
+    # -----------------------------------------------------------------
+    #  Check 6: Detect overlapping time slots on the same day
+    # -----------------------------------------------------------------
+
+    def check_slot_overlaps(self) -> list[str]:
+        """
+        Verify that no two time slots on the same day have
+        overlapping time ranges.
+
+        Overlapping slots would mean the scheduler could
+        accidentally double-book a batch or faculty even
+        though it thinks they are in different slots.
+        """
+        errors = []
+
+        slots = self.session.query(Slot).all()
+
+        # Group slots by day
+        day_slots = defaultdict(list)
+        for slot in slots:
+            day_slots[slot.day_of_week].append(slot)
+
+        for day, slot_list in day_slots.items():
+            # Sort by start time
+            slot_list.sort(key=lambda s: s.start_time)
+
+            for i in range(len(slot_list) - 1):
+                current = slot_list[i]
+                next_slot = slot_list[i + 1]
+
+                # Overlap: current ends after next starts
+                if current.end_time > next_slot.start_time:
+                    errors.append(
+                        f"Slot '{current.slot_id}' ({current.start_time}-{current.end_time}) "
+                        f"overlaps with '{next_slot.slot_id}' ({next_slot.start_time}-{next_slot.end_time}) "
+                        f"on {day}. Fix the slot times to avoid conflicts."
+                    )
+
+        return errors
+
+    # -----------------------------------------------------------------
+    #  Check 7: Each batch has enough non-free slots for its demand
+    # -----------------------------------------------------------------
+
+    def check_batch_slot_feasibility(self) -> list[str]:
+        """
+        Verify that each batch's total lecture demand does not
+        exceed the number of available (non-free) time slots.
+
+        Unlike check_slot_supply which is global, this catches
+        cases where one specific batch has too many courses.
+        """
+        errors = []
+
+        # Count non-free slots
+        available_slots = (
+            self.session
+            .query(Slot)
+            .filter(Slot.slot_name != "Free-Slot")
+            .count()
+        )
+
+        if available_slots == 0:
+            return errors  # already caught by check 5
+
+        # Calculate per-batch demand
+        batch_courses = (
+            self.session
+            .query(BatchCourse, Course, Batch)
+            .join(Course, BatchCourse.course_id == Course.course_id)
+            .join(Batch, BatchCourse.batch_id == Batch.batch_id)
+            .all()
+        )
+
+        batch_demand = defaultdict(int)
+        for bc, course, batch in batch_courses:
+            batch_demand[batch.label] += course.lectures
+
+        for batch_label, demand in batch_demand.items():
+            if demand > available_slots:
+                errors.append(
+                    f"Batch '{batch_label}' requires {demand} lecture sessions "
+                    f"but only {available_slots} non-free slots are available. "
+                    f"This batch cannot be fully scheduled."
+                )
+
+        return errors
+
+    # -----------------------------------------------------------------
+    #  Check 8: No duplicate batch-course assignments
+    # -----------------------------------------------------------------
+
+    def check_duplicate_batch_courses(self) -> list[str]:
+        """
+        Verify that no course is assigned to the same batch twice.
+
+        While the database has a unique constraint, this check
+        provides a clearer error message before the DB rejects it.
+        """
+        errors = []
+
+        batch_courses = (
+            self.session
+            .query(BatchCourse, Course, Batch)
+            .join(Course, BatchCourse.course_id == Course.course_id)
+            .join(Batch, BatchCourse.batch_id == Batch.batch_id)
+            .all()
+        )
+
+        seen = set()
+        for bc, course, batch in batch_courses:
+            key = (course.course_code, batch.label)
+
+            if key in seen:
+                errors.append(
+                    f"Course '{course.course_code}' is assigned to "
+                    f"batch '{batch.label}' more than once. "
+                    f"Remove the duplicate mapping."
+                )
+
+            seen.add(key)
 
         return errors
