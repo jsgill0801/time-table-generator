@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="app-page" data-page="timetable">
+    <div class="app-shell">
+        <aside class="app-sidebar" data-sidebar></aside>
+
+        <main class="app-main">
+            <header class="page-header">
+                <div>
+                    <p class="page-kicker">Step 3 of 3</p>
+                    <h1>Timetable</h1>
+                    <p class="page-intro">Choose a view and download the latest run.</p>
+                </div>
+                <div class="page-chip" id="timetableStatusChip">No run</div>
+            </header>
+
+            <section class="content-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Download View</h2>
+                        <p class="panel-subtext">Switch tabs to change the file.</p>
+                    </div>
+                </div>
+
+                <div class="tab-strip" role="tablist" aria-label="Timetable views">
+                    <button class="tab-button is-active" type="button" data-view-tab="overall">Overall</button>
+                    <button class="tab-button" type="button" data-view-tab="faculty">Faculty-wise</button>
+                    <button class="tab-button" type="button" data-view-tab="rooms">Room-wise</button>
+                    <button class="tab-button" type="button" data-view-tab="batches">Batch-wise</button>
+                </div>
+
+                <div class="download-panel">
+                    <article class="run-card">
+                        <p class="page-kicker">Selected Type</p>
+                        <h3 id="selectedTimetableTitle">Overall</h3>
+                        <p id="selectedTimetableDescription">Combined file for all batches.</p>
+                    </article>
+
+                    <aside class="note-card">
+                        <h3>Export</h3>
+                        <p class="download-helper" id="downloadHelperText">Run Dashboard first to enable downloads.</p>
+                        <div class="run-actions">
+                            <button class="btn-primary btn-large" id="downloadTimetableButton" type="button">Download</button>
+                        </div>
+                    </aside>
+                </div>
+
+                <div class="empty-state" id="timetableEmptyState">
+                    <p>No run yet. Generate from Dashboard first.</p>
+                </div>
+            </section>
+
+            <section class="content-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Status</h2>
+                        <p class="panel-subtext">Downloads only. The full grid is not shown here.</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid stats-grid-compact" id="timetableStatusCards"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>

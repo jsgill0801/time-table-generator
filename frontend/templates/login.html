@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="auth-page">
+    <main class="auth-shell">
+        <section class="auth-brand">
+            <div>
+                <small>Admin Access</small>
+                <h1>Timetable Generator</h1>
+                <p>Manage setup, run the timetable, and download files.</p>
+            </div>
+
+            <div class="auth-points">
+                <div class="auth-point">
+                    <strong>Setup data</strong>
+                    <p>Courses, faculty, rooms, batches, categories, and slots.</p>
+                </div>
+                <div class="auth-point">
+                    <strong>Run once</strong>
+                    <p>Generate the latest timetable from the dashboard.</p>
+                </div>
+                <div class="auth-point">
+                    <strong>Download view</strong>
+                    <p>Export overall, faculty, room, or batch files.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="auth-card">
+            <div>
+                <h2>Login</h2>
+                <p class="muted-copy">Sign in to continue.</p>
+            </div>
+
+            <form class="auth-form" id="loginForm">
+                <div class="form-field">
+                    <label for="loginUsername">Username</label>
+                    <input id="loginUsername" name="username" type="text" placeholder="Enter username" autocomplete="username" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="loginPassword">Password</label>
+                    <input id="loginPassword" name="password" type="password" placeholder="Enter password" autocomplete="current-password" required>
+                </div>
+
+                <p class="form-error is-hidden" id="loginError" aria-live="polite"></p>
+
+                <button class="btn-primary" type="submit">Sign In</button>
+            </form>
+
+            <p class="auth-footer">Need an account? <a href="signup.html">Create one</a></p>
+        </section>
+    </main>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>

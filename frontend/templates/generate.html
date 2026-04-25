@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Timetable | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="app-page" data-page="dashboard">
+    <div class="app-shell">
+        <aside class="app-sidebar" data-sidebar></aside>
+
+        <main class="app-main">
+            <header class="page-header dashboard-header">
+                <div>
+                    <p class="page-kicker">Step 2 of 3</p>
+                    <h1>Dashboard</h1>
+                    <p class="page-intro">Run the timetable after setup is ready.</p>
+                </div>
+            </header>
+
+            <section class="stats-grid stats-grid-dashboard dashboard-stats-grid" aria-label="Dashboard summary">
+                <article class="stat-card stat-card-muted">
+                    <div>
+                        <span class="stat-label">Courses Offered</span>
+                        <strong class="stat-value" id="courseCount">0</strong>
+                    </div>
+                    <p>Ready for scheduling.</p>
+                </article>
+
+                <article class="stat-card stat-card-muted">
+                    <div>
+                        <span class="stat-label">Faculty Available</span>
+                        <strong class="stat-value" id="facultyCount">0</strong>
+                    </div>
+                    <p>In the current roster.</p>
+                </article>
+
+                <article class="stat-card stat-card-muted">
+                    <div>
+                        <span class="stat-label">Rooms Available</span>
+                        <strong class="stat-value" id="roomCount">0</strong>
+                    </div>
+                    <p>Active teaching spaces.</p>
+                </article>
+
+                <article class="stat-card stat-card-muted">
+                    <div>
+                        <span class="stat-label">Batches</span>
+                        <strong class="stat-value" id="batchCount">0</strong>
+                    </div>
+                    <p>Included in this cycle.</p>
+                </article>
+
+                <article class="stat-card stat-card-muted">
+                    <div>
+                        <span class="stat-label">Categories</span>
+                        <strong class="stat-value" id="categoryCount">0</strong>
+                    </div>
+                    <p>Rules used by the scheduler.</p>
+                </article>
+
+                <article class="stat-card stat-card-muted">
+                    <div>
+                        <span class="stat-label">Slots</span>
+                        <strong class="stat-value" id="slotCount">0</strong>
+                    </div>
+                    <p>Current teaching windows.</p>
+                </article>
+            </section>
+
+            <section class="content-panel dashboard-panel dashboard-run-panel">
+                <div class="panel-heading dashboard-panel-heading">
+                    <div>
+                        <h2>Run Timetable</h2>
+                        <p class="panel-subtext" id="runContext">Check setup, then start the run.</p>
+                    </div>
+                </div>
+
+                <div class="run-layout run-layout-single dashboard-run-layout">
+                    <article class="run-card run-card-featured dashboard-run-card">
+                        <h3>Generate</h3>
+                        <p>Creates the latest timetable for downloads and refreshes the latest run summary.</p>
+
+                        <div class="run-actions">
+                            <button class="btn-primary btn-large" id="runTimetableButton" type="button">Run</button>
+                            <div class="status-inline" id="runStatus" role="status" aria-live="polite">
+                                <span class="spinner" aria-hidden="true"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="content-panel report-panel is-hidden dashboard-panel" id="dashboardReport">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Run Summary</h2>
+                        <p class="panel-subtext">See course coverage and any faculty, room, or slot conflicts for the latest run.</p>
+                    </div>
+                </div>
+
+                <div class="report-grid report-grid-dashboard">
+                    <article class="report-card">
+                        <h3>Courses Scheduled</h3>
+                        <strong class="report-value" id="courseUsageCount">0 / 0</strong>
+                        <p id="courseUsageText">No run yet.</p>
+                    </article>
+
+                    <article class="report-card">
+                        <h3>Course Clashes</h3>
+                        <strong class="report-value" id="courseClashCount">0</strong>
+                        <p id="courseClashText">No run yet.</p>
+                    </article>
+
+                    <article class="report-card">
+                        <h3>Faculty Clashes</h3>
+                        <strong class="report-value" id="facultyClashCount">0</strong>
+                        <p id="facultyClashText">No run yet.</p>
+                    </article>
+
+                    <article class="report-card">
+                        <h3>Room Conflicts</h3>
+                        <strong class="report-value" id="roomConflictCount">0</strong>
+                        <p id="roomConflictText">No run yet.</p>
+                    </article>
+
+                    <article class="report-card">
+                        <h3>Slot Conflicts</h3>
+                        <strong class="report-value" id="slotConflictCount">0</strong>
+                        <p id="slotConflictText">No run yet.</p>
+                    </article>
+                </div>
+
+                <article class="conflict-report-card">
+                    <div class="panel-heading panel-heading-compact">
+                        <div>
+                            <h3>Conflict Report</h3>
+                            <p class="panel-subtext" id="conflictReportSummary">Run the timetable to see unresolved course, room, or slot issues.</p>
+                        </div>
+                    </div>
+
+                    <div class="conflict-list" id="conflictReportList">
+                        <p class="muted-copy">No run yet.</p>
+                    </div>
+                </article>
+
+                <div class="success-banner">
+                    <div>
+                        <h3>Latest run</h3>
+                        <p id="lastRunText">Run the timetable to create the latest file set.</p>
+                    </div>
+                    <a class="inline-link" href="timetable.html">Open Timetable</a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>

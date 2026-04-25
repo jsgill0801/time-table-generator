@@ -40,3 +40,5 @@ htmlcov/
 
 # Flask session files
 flask_session/
+
+.early.coverage

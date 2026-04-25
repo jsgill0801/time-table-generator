@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="auth-page">
+    <main class="auth-shell">
+        <section class="auth-brand">
+            <div>
+                <small>Admin Setup</small>
+                <h1>Create Admin Access</h1>
+                <p>Create an account to manage setup, runs, and exports.</p>
+            </div>
+
+            <div class="auth-points">
+                <div class="auth-point">
+                    <strong>Setup data</strong>
+                    <p>Each part of the timetable has its own page.</p>
+                </div>
+                <div class="auth-point">
+                    <strong>Run timetable</strong>
+                    <p>Generate the latest timetable from the dashboard.</p>
+                </div>
+                <div class="auth-point">
+                    <strong>Download files</strong>
+                    <p>Export overall, faculty, room, or batch views.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="auth-card">
+            <div>
+                <h2>Signup</h2>
+                <p class="muted-copy">Create an account to continue.</p>
+            </div>
+
+            <form class="auth-form" id="signupForm">
+                <div class="form-field">
+                    <label for="signupUsername">Username</label>
+                    <input id="signupUsername" name="username" type="text" placeholder="Choose a username" autocomplete="username" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="signupEmail">Email</label>
+                    <input id="signupEmail" name="email" type="email" placeholder="Enter institutional email" autocomplete="email" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="signupPassword">Password</label>
+                    <input id="signupPassword" name="password" type="password" placeholder="Create a password" autocomplete="new-password" required>
+                </div>
+
+                <p class="form-error is-hidden" id="signupError" aria-live="polite"></p>
+
+                <button class="btn-primary" type="submit">Create Account</button>
+            </form>
+
+            <p class="auth-footer">Already registered? <a href="login.html">Return to login</a></p>
+        </section>
+    </main>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty | Timetable Generator</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="app-page" data-page="faculty" data-resource-page="faculty">
+    <div class="app-shell">
+        <aside class="app-sidebar" data-sidebar></aside>
+
+        <main class="app-main">
+            <header class="page-header">
+                <div>
+                    <h1 data-resource-title></h1>
+                    <p class="page-intro" data-resource-description></p>
+                </div>
+                <div class="page-chip" data-resource-chip></div>
+            </header>
+
+            <section class="panel-grid">
+                <article class="content-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 data-table-title></h2>
+                            <p class="panel-subtext">Search and review records.</p>
+                        </div>
+
+                        <label class="search-field">
+                            <span>Search</span>
+                            <input type="search" data-resource-search>
+                        </label>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead data-resource-head></thead>
+                            <tbody data-resource-body></tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state is-hidden" id="resourceEmptyState">
+                        <p>No matching records.</p>
+                    </div>
+                </article>
+
+                <aside class="content-panel">
+                    <div class="import-panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Import Faculty</h2>
+                                <p class="panel-subtext">Upload a CSV file containing faculty members using the exact columns below.</p>
+                            </div>
+                        </div>
+                        <form class="import-form" action="/api/v1/import/faculties" method="post" enctype="multipart/form-data">
+                            <label class="form-field">
+                                <span>Select CSV file</span>
+                                <input type="file" name="file" accept=".csv,text/csv" required>
+                            </label>
+                            <button class="modal-submit-button" type="submit">Upload CSV</button>
+                        </form>
+                        <p class="import-note">Required columns: <strong>faculty_code, faculty_name, faculty_email, max_load</strong></p>
+                        <pre class="csv-example">faculty_code,faculty_name,faculty_email,max_load
+PD,Dr. Priya Desai,pd@college.edu,18
+AV,Prof. Amit Verma,av@college.edu,16
+SS,Dr. Sneha Sharma,ss@college.edu,14</pre>
+                    </div>
+                </aside>
+            </section>
+        </main>
+    </div>
+
+    <script src="../static/script.js" defer></script>
+</body>
+</html>
