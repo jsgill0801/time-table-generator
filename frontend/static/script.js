@@ -149,7 +149,7 @@
             description: "Student groups included in the timetable.",
             chip: "Batch Data",
             tableTitle: "Batch List",
-            searchPlaceholder: "Search batch, program, section, or semester",
+            searchPlaceholder: "Search branch, program, section, or semester",
             note: "Batch names, sections, and strength shape the exports.",
             metrics: function (rows) {
                 return [
@@ -164,19 +164,18 @@
                 { label: "Exports", value: "Each batch gets its own file." }
             ],
             columns: [
-                { key: "batch", label: "Batch" },
                 { key: "program", label: "Program" },
+                { key: "branch", label: "Branch" },
                 { key: "semester", label: "Semester", badge: "secondary" },
-                { key: "section", label: "Section", badge: "accent" },
-                { key: "strength", label: "Strength" }
+                { key: "section", label: "Section", badge: "accent" }
             ],
             rows: [
-                { batch: "ICT Sem 2 A", program: "B.Tech ICT", semester: "Sem 2", section: "A", strength: "62" },
-                { batch: "ICT Sem 2 B", program: "B.Tech ICT", semester: "Sem 2", section: "B", strength: "58" },
-                { batch: "ICT Sem 4 A", program: "B.Tech ICT", semester: "Sem 4", section: "A", strength: "54" },
-                { batch: "ICT Sem 4 B", program: "B.Tech ICT", semester: "Sem 4", section: "B", strength: "51" },
-                { batch: "ICT Sem 6 A", program: "B.Tech ICT", semester: "Sem 6", section: "A", strength: "47" },
-                { batch: "ICT Sem 6 B", program: "B.Tech ICT", semester: "Sem 6", section: "B", strength: "45" }
+                { batch: "ICT Sem 2 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 2", section: "A", strength: "62" },
+                { batch: "ICT Sem 2 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 2", section: "B", strength: "58" },
+                { batch: "ICT Sem 4 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 4", section: "A", strength: "54" },
+                { batch: "ICT Sem 4 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 4", section: "B", strength: "51" },
+                { batch: "ICT Sem 6 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 6", section: "A", strength: "47" },
+                { batch: "ICT Sem 6 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 6", section: "B", strength: "45" }
             ]
         },
         categories: {
@@ -785,10 +784,10 @@
                 id: "batches",
                 title: "Add Batch",
                 fields: [
-                    { key: "program", label: "Program", type: "select", options: getUniqueResourceValues("batches", "program"), required: true },
-                    { key: "branch", label: "Branch", type: "select", options: getBatchBranchOptions(), required: true },
-                    { key: "semester", label: "Semester", type: "select", options: getUniqueResourceValues("batches", "semester"), required: true },
-                    { key: "section", label: "Section", type: "select", options: getUniqueResourceValues("batches", "section"), required: true }
+                    { key: "program", label: "Program", type: "text", required: true },
+                    { key: "branch", label: "Branch", type: "text", required: true },
+                    { key: "semester", label: "Semester", type: "text", inputMode: "numeric", required: true, numeric: true },
+                    { key: "section", label: "Section", type: "text", required: true }
                 ],
                 toRow: createBatchResourceRow
             };
