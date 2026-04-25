@@ -40,26 +40,21 @@
             description: "Courses used in the timetable.",
             chip: "Course Data",
             tableTitle: "Course List",
-            searchPlaceholder: "Search code, course, category, or semester",
+            searchPlaceholder: "",
             note: "Check names, semesters, and categories before you run.",
             metrics: function (rows) {
-                return [
-                    { label: "Records", value: rows.length, detail: "Used in the next run." },
-                    { label: "Semesters", value: uniqueCount(rows, "semester"), detail: "Covered in this setup." },
-                    { label: "Categories", value: uniqueCount(rows, "category"), detail: "Mapped course types." }
-                ];
+                return [];
             },
-            highlights: [
-                { label: "Before run", value: "Check category and semester." },
-                { label: "High impact", value: "Labs need tighter slot planning." },
-                { label: "Next", value: "Go to Dashboard and run." }
-            ],
+            highlights: [],
             columns: [
-                { key: "code", label: "Code" },
-                { key: "name", label: "Course" },
-                { key: "category", label: "Category", badge: "accent" },
+                { key: "code", label: "Course Code" },
+                { key: "name", label: "Course Name" },
+                { key: "lectureHours", label: "Number of Lecture Hours" },
+                { key: "tutorialHours", label: "Tutorial Hours" },
+                { key: "labHours", label: "Lab Hours" },
                 { key: "credits", label: "Credits" },
-                { key: "semester", label: "Semester", badge: "secondary" }
+                { key: "batchCategories", label: "Batches" },
+                { key: "faculty", label: "Faculty" }
             ],
             rows: [
                 { code: "ICT201", name: "Data Structures", category: "Core Theory", credits: "4", semester: "Sem 2" },
@@ -1708,8 +1703,8 @@
         }
 
         return config.rows.filter(function (row) {
-            return Object.keys(row).some(function (key) {
-                return String(row[key]).toLowerCase().includes(value);
+            return config.columns.some(function (column) {
+                return getResourceColumnText(row, column, config).toLowerCase().includes(value);
             });
         });
     }
@@ -2108,7 +2103,7 @@
                     "<tr>" +
                     config.columns
                         .map(function (column) {
-                            return "<td>" + formatTableCell(row[column.key], column.badge) + "</td>";
+                            return "<td>" + formatTableCell(getResourceColumnValue(row, column, config), column.badge) + "</td>";
                         })
                         .join("") +
                     (config.showActions === false ? "" : '<td class="actions-cell">' + renderResourceActionButtons(rowIndex) + "</td>") +
@@ -2971,8 +2966,60 @@
         });
     }
 
+    function getResourceColumnValue(row, column, config) {
+        if (config === RESOURCE_CONFIGS.courses) {
+            if (column.key === "lectureHours") {
+                return row.lectureHours || inferCourseHourValue(row, "lecture");
+            }
+
+            if (column.key === "tutorialHours") {
+                return row.tutorialHours || "0";
+            }
+
+            if (column.key === "labHours") {
+                return row.labHours || inferCourseHourValue(row, "lab");
+            }
+
+            if (column.key === "batchCategories") {
+                return normalizeCourseBatchCategories(row);
+            }
+
+            if (column.key === "faculty") {
+                return row.faculty || findFacultyForCourse(row) || "";
+            }
+        }
+
+        return row[column.key];
+    }
+
+    function getResourceColumnText(row, column, config) {
+        const value = getResourceColumnValue(row, column, config);
+
+        if (Array.isArray(value)) {
+            return value
+                .map(function (item) {
+                    if (item && typeof item === "object") {
+                        if (item.batch && item.category) {
+                            return item.batch + " - " + item.category;
+                        }
+
+                        return Object.values(item).filter(Boolean).join(" ");
+                    }
+
+                    return String(item || "");
+                })
+                .join(", ");
+        }
+
+        if (value && typeof value === "object") {
+            return Object.values(value).filter(Boolean).join(" ");
+        }
+
+        return String(value || "");
+    }
+
     function formatTableCell(value, badgeType) {
-        const safeValue = escapeHtml(String(value || ""));
+        const safeValue = escapeHtml(getDisplayValueText(value));
 
         if (!badgeType) {
             return safeValue;
@@ -2980,6 +3027,30 @@
 
         const className = badgeType === "secondary" ? "table-pill is-secondary" : "table-pill";
         return '<span class="' + className + '">' + safeValue + "</span>";
+    }
+
+    function getDisplayValueText(value) {
+        if (Array.isArray(value)) {
+            return value
+                .map(function (item) {
+                    if (item && typeof item === "object") {
+                        if (item.batch && item.category) {
+                            return item.batch + " - " + item.category;
+                        }
+
+                        return Object.values(item).filter(Boolean).join(" ");
+                    }
+
+                    return String(item || "");
+                })
+                .join(", ");
+        }
+
+        if (value && typeof value === "object") {
+            return Object.values(value).filter(Boolean).join(" ");
+        }
+
+        return String(value || "");
     }
 
     function uniqueCount(rows, key) {

@@ -13,14 +13,12 @@
         <main class="app-main">
             <header class="page-header">
                 <div>
-                    <p class="page-kicker">Setup</p>
+                    <!--<p class="page-kicker">Setup</p>-->
                     <h1 data-resource-title></h1>
                     <p class="page-intro" data-resource-description></p>
                 </div>
                 <div class="page-chip" data-resource-chip></div>
             </header>
-
-            <section class="stats-grid stats-grid-compact" data-resource-metrics></section>
 
             <section class="panel-grid">
                 <article class="content-panel">
@@ -63,9 +61,9 @@
                             </label>
                             <button class="modal-submit-button" type="submit">Upload CSV</button>
                         </form>
-                        <p class="import-note">Required columns: <strong>course_code, course_name, lectures, tutorials, labs, credits</strong></p>
-                        <pre class="csv-example">course_code,course_name,lectures,tutorials,labs,credits
-ICT201,Data Structures,4,0,0,4
+                        <p class="import-note">Required columns: <strong>course_code, course_name, lectures, tutorials, labs, credits, batches-category, faculty</strong></p>
+                        <pre class="csv-example">course_code, course_name, lectures, tutorials, labs, credits, batches-category, faculty
+ICT201,Data Structures,4,0,0,4,ICT Sem 2 A - Core Theory, ICT Sem 2 B - Core Theory, Dr. Meera Shah
 ICT207,Digital Logic Lab,0,0,2,2
 ICT209,Software Engineering,3,0,0,3</pre>
                     </div>
