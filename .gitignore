@@ -24,6 +24,7 @@ env/
 
 # Generated output files
 output/
+logs/
 
 # OS files
 .DS_Store

@@ -89,7 +89,7 @@ class ValidationService:
         missing = assigned_course_ids - faculty_assigned_ids
 
         for course_id in missing:
-            course = self.session.query(Course).get(course_id)
+            course = self.session.get(Course, course_id)
 
             if course:
                 errors.append(
