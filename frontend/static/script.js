@@ -37,7 +37,7 @@
     const RESOURCE_CONFIGS = {
         courses: {
             title: "Courses",
-            description: "Courses used in the timetable.",
+            description: "",
             chip: "Course Data",
             tableTitle: "Course List",
             searchPlaceholder: "",
@@ -69,7 +69,7 @@
         },
         faculty: {
             title: "Faculty",
-            description: "Faculty available for scheduling.",
+            description: "",
             chip: "Faculty Data",
             tableTitle: "Faculty List",
             searchPlaceholder: "Search faculty or load",
@@ -99,7 +99,7 @@
         },
         rooms: {
             title: "Rooms",
-            description: "Rooms and capacities used in scheduling.",
+            description: "",
             chip: "Room Data",
             tableTitle: "Room List",
             searchPlaceholder: "Search room or capacity",
@@ -160,7 +160,7 @@
         },
         categories: {
             title: "Categories",
-            description: "Teaching categories used in scheduling.",
+            description: "",
             chip: "Category Rules",
             tableTitle: "Category List",
             searchPlaceholder: "Search category",
@@ -184,7 +184,7 @@
         },
         slots: {
             title: "Slots",
-            description: "Time windows used by the timetable.",
+            description: "",
             chip: "Slot Data",
             tableTitle: "Slot List",
             searchPlaceholder: "Search slot name or time",
@@ -303,7 +303,6 @@
             navMarkup +
             "</nav>" +
             '<div class="sidebar-footer">' +
-            '<p class="sidebar-note">Setup, run, download.</p>' +
             '<button class="logout-button" type="button" data-logout-button>Logout</button>' +
             "</div>";
 
@@ -425,17 +424,6 @@
         }
 
         runButton.addEventListener("click", async function () {
-            const status = document.getElementById("runStatus");
-            const context = document.getElementById("runContext");
-
-            if (status) {
-                status.classList.add("is-visible");
-            }
-
-            if (context) {
-                context.textContent = "Checking setup data...";
-            }
-
             setButtonBusy(runButton, true, "Running...");
 
             try {
@@ -444,15 +432,7 @@
                 const generation = createGenerationPayload();
                 storeGeneration(generation);
                 renderDashboardReport(generation);
-
-                if (context) {
-                    context.textContent = "Run complete. Open Timetable to download.";
-                }
             } finally {
-                if (status) {
-                    status.classList.remove("is-visible");
-                }
-
                 setButtonBusy(runButton, false, "Run");
             }
         });
@@ -484,7 +464,7 @@
         setText("roomConflictText", report.roomNote);
         setText("slotConflictText", report.slotNote);
         setText("conflictReportSummary", report.conflictSummary);
-        setText("lastRunText", "Last generated on " + formatDateTime(generation.generatedAt) + ". " + report.courseUsageNote);
+        setText("lastRunText", "Last generated on " + formatDateTime(generation.generatedAt) + ".");
         renderConflictReportList(document.getElementById("conflictReportList"), report.conflicts);
 
         reportPanel.classList.remove("is-hidden");

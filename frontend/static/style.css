@@ -778,6 +778,7 @@ textarea:focus {
     background: rgba(201, 153, 107, 0.98);
     color: var(--color-text);
     font-weight: 700;
+    line-height: 1;
 }
 
 .inline-link:hover,

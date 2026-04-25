@@ -13,10 +13,9 @@
         <main class="app-main">
             <header class="page-header dashboard-header">
                 <div>
-                    <!--<p class="page-kicker">Step 2 of 3</p>-->
                     <h1>Dashboard</h1>
-                    <p class="page-intro">Run the timetable after setup is ready.</p>
                 </div>
+                <button class="btn-primary btn-large" id="runTimetableButton" type="button">Run</button>
             </header>
 
             <section class="stats-grid stats-grid-dashboard dashboard-stats-grid" aria-label="Dashboard summary">
@@ -69,35 +68,11 @@
                 </article>
             </section>
 
-            <section class="content-panel dashboard-panel dashboard-run-panel">
-                <div class="panel-heading dashboard-panel-heading">
-                    <div>
-                        <h2>Run Timetable</h2>
-                        <p class="panel-subtext" id="runContext"></p>
-                    </div>
-                </div>
-
-                <div class="run-layout run-layout-single dashboard-run-layout">
-                    <article class="run-card run-card-featured dashboard-run-card">
-                        <h3>Generate</h3>
-                        <p>Creates the latest timetable for downloads and refreshes the latest run summary.</p>
-
-                        <div class="run-actions">
-                            <button class="btn-primary btn-large" id="runTimetableButton" type="button">Run</button>
-                            <div class="status-inline" id="runStatus" role="status" aria-live="polite">
-                                <span class="spinner" aria-hidden="true"></span>
-                                <span>Checking...</span>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-            </section>
 
             <section class="content-panel report-panel is-hidden dashboard-panel" id="dashboardReport">
                 <div class="panel-heading">
                     <div>
                         <h2>Run Summary</h2>
-                        <p class="panel-subtext">See course coverage and any faculty, room, or slot conflicts for the latest run.</p>
                     </div>
                 </div>
 
@@ -105,31 +80,26 @@
                     <article class="report-card">
                         <h3>Courses Scheduled</h3>
                         <strong class="report-value" id="courseUsageCount">0 / 0</strong>
-                        <p id="courseUsageText">No run yet.</p>
                     </article>
 
                     <article class="report-card">
                         <h3>Course Clashes</h3>
                         <strong class="report-value" id="courseClashCount">0</strong>
-                        <p id="courseClashText">No run yet.</p>
                     </article>
 
                     <article class="report-card">
                         <h3>Faculty Clashes</h3>
                         <strong class="report-value" id="facultyClashCount">0</strong>
-                        <p id="facultyClashText">No run yet.</p>
                     </article>
 
                     <article class="report-card">
                         <h3>Room Conflicts</h3>
                         <strong class="report-value" id="roomConflictCount">0</strong>
-                        <p id="roomConflictText">No run yet.</p>
                     </article>
 
                     <article class="report-card">
                         <h3>Slot Conflicts</h3>
                         <strong class="report-value" id="slotConflictCount">0</strong>
-                        <p id="slotConflictText">No run yet.</p>
                     </article>
                 </div>
 
