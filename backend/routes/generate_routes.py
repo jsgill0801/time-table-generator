@@ -19,7 +19,11 @@ from backend.models.timetable import Timetable
 from backend.models.conflict_report import ConflictReport
 from backend.services.validation_service import ValidationService
 from backend.services.data_service import DataService
+from backend.services.scheduler import Scheduler
+from backend.services.optimiser import Optimiser
 from backend.routes.auth_routes import login_required
+
+from datetime import time as dt_time
 
 
 generate_bp = Blueprint("generate", __name__)
@@ -40,8 +44,10 @@ def generate_timetable():
         2. If errors exist, return them and halt
         3. Clear any previous timetable and conflict data
         4. Fetch and preprocess input data
-        5. Run the scheduling engine (to be implemented)
-        6. Return the result summary
+        5. Run the hard-constraint scheduler
+        6. Run the soft-constraint optimizer
+        7. Save results to database
+        8. Return the result summary
     """
     db = next(get_db())
     try:
@@ -65,7 +71,6 @@ def generate_timetable():
         data_service = DataService(db)
         scheduling_input = data_service.get_scheduling_input()
 
-        # Quick sanity check on the preprocessed data
         demand = scheduling_input["demand"]
         if not demand:
             return jsonify({
@@ -73,27 +78,75 @@ def generate_timetable():
                 "message": "No courses to schedule. Add batch-course mappings first.",
             }), 400
 
-        # Step 4: Run the scheduling engine
-        # The scheduler module will be implemented separately.
-        # For now, return a summary of what would be scheduled.
+        # Step 4: Run the hard-constraint scheduler
+        scheduler = Scheduler(scheduling_input)
+        result = scheduler.run()
 
-        total_lectures = sum(d["lectures_required"] for d in demand)
-        total_rooms = len(scheduling_input["room_index"])
-        total_slots = len(scheduling_input["all_slots"])
+        # Step 5: Run the soft-constraint optimizer on placed assignments
+        if result["assignments"]:
+            optimiser = Optimiser(
+                assignments=result["assignments"],
+                slot_lookup=scheduling_input["slot_lookup"],
+                slot_day_index=scheduling_input["slot_day_index"],
+                room_index=scheduling_input["room_index"],
+            )
+            result["assignments"] = optimiser.run()
+
+        # Step 6: Save assignments to the timetable table
+        for a in result["assignments"]:
+            # Convert time strings back to time objects if needed
+            start = a["start_time"]
+            end = a["end_time"]
+
+            if isinstance(start, str):
+                parts = start.split(":")
+                start = dt_time(int(parts[0]), int(parts[1]))
+            if isinstance(end, str):
+                parts = end.split(":")
+                end = dt_time(int(parts[0]), int(parts[1]))
+
+            row = Timetable(
+                batch_course_id=a["batch_course_id"],
+                faculty_code=a["faculty_code"],
+                classroom_name=a["classroom_name"],
+                slot_id=a["slot_id"],
+                day_of_week=a["day_of_week"],
+                start_time=start,
+                end_time=end,
+                slot_name=a["slot_name"],
+                course_code=a["course_code"],
+                course_name=a["course_name"],
+                ltpc=a["ltpc"],
+                category_name=a["category_name"],
+                batch_label=a["batch_label"],
+            )
+            db.add(row)
+
+        # Step 7: Save conflicts to the conflict_report table
+        for c in result["conflicts"]:
+            row = ConflictReport(
+                course_code=c["course_code"],
+                course_name=c["course_name"],
+                batch_label=c["batch_label"],
+                faculty_code=c["faculty_code"],
+                reason=c["reason"],
+            )
+            db.add(row)
+
+        db.commit()
+
+        # Step 8: Return summary
+        stats = result["stats"]
+        status = "success" if stats["unresolved"] == 0 else "partial"
 
         return jsonify({
-            "status": "ready",
+            "status": status,
             "message": (
-                "Validation passed. Scheduling engine not yet implemented. "
-                "Data is preprocessed and ready."
+                "Timetable generated successfully with no conflicts."
+                if status == "success"
+                else f"Timetable generated with {stats['unresolved']} unresolved conflict(s)."
             ),
-            "summary": {
-                "courses_to_schedule": len(demand),
-                "total_lectures": total_lectures,
-                "available_rooms": total_rooms,
-                "available_slots": total_slots,
-                "faculty_count": len(scheduling_input["faculty_load"]),
-            },
+            "stats": stats,
         }), 200
 
     except Exception as e:
