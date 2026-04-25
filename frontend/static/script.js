@@ -53,7 +53,7 @@
                 { key: "tutorialHours", label: "Tutorial Hours" },
                 { key: "labHours", label: "Lab Hours" },
                 { key: "credits", label: "Credits" },
-                { key: "batchCategories", label: "Batches" },
+                { key: "batchCategories", label: "BATCH-CATEGORY" },
                 { key: "faculty", label: "Faculty" }
             ],
             rows: [
