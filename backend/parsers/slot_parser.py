@@ -2,11 +2,15 @@
 CSV parser for Slot records.
 
 Expected CSV columns:
-    slot_id, day_of_week, start_time, end_time, slot_name (optional)
+    day_of_week, start_time, end_time, slot_name
+
+Optional CSV column:
+    slot_id
 """
 
 from backend.parsers.base_parser import BaseParser
 from backend.utils.errors import DataError
+from backend.utils.helpers import build_slot_id
 
 
 # Valid day names for validation
@@ -19,7 +23,6 @@ VALID_DAYS = {
 class SlotParser(BaseParser):
 
     REQUIRED_FIELDS = [
-        "slot_id",
         "day_of_week",
         "start_time",
         "end_time",
@@ -30,18 +33,14 @@ class SlotParser(BaseParser):
         Validate and clean a single slot row.
 
         Rules:
-            - slot_id: non-empty, max 10 characters
             - day_of_week: must be a valid weekday name
             - start_time: valid HH:MM format
             - end_time: valid HH:MM format, must be after start_time
             - slot_name: optional (e.g. "Slot-1", "Free-Slot")
+            - slot_id: optional; derived automatically when omitted
         """
-        slot_id = self.require_non_empty(row["slot_id"], "slot_id", row_num)
+        slot_id = (row.get("slot_id") or "").strip()
 
-        if len(slot_id) > 10:
-            raise DataError("slot_id", f"Max 10 characters, got {len(slot_id)}.", row_num)
-
-        # Validate day of week
         day = row["day_of_week"].strip().title()
 
         if day not in VALID_DAYS:
@@ -64,6 +63,10 @@ class SlotParser(BaseParser):
 
         # Slot name is optional
         slot_name = row.get("slot_name", "").strip() or None
+        slot_id = slot_id or build_slot_id(day, start, slot_name)
+
+        if len(slot_id) > 10:
+            raise DataError("slot_id", f"Max 10 characters, got {len(slot_id)}.", row_num)
 
         return {
             "slot_id": slot_id,

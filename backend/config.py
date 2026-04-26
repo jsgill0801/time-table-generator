@@ -6,10 +6,12 @@ configuration classes for different environments.
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env file into environment variables
-load_dotenv()
+# Resolve the .env path relative to THIS file's parent (project root)
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_env_path, override=False)
 
 
 class Config:
@@ -17,20 +19,26 @@ class Config:
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-fallback-secret-key")
 
+    # Default to SQLite for zero-setup development.
+    # Switch to PostgreSQL by editing .env.
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/timetable_db"
+        "sqlite:///timetable.db",
     )
 
     # Flask-Session settings
     SESSION_TYPE = "filesystem"
+
+    DEFAULT_ADMIN_USERNAME = os.getenv("DEFAULT_ADMIN_USERNAME", "admin")
+    DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@ttg.local")
+    DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin123")
 
 
 class DevelopmentConfig(Config):
     """Development-specific settings."""
 
     DEBUG = True
-    SQLALCHEMY_ECHO = True  # log SQL queries to console
+    SQLALCHEMY_ECHO = False
 
 
 class ProductionConfig(Config):

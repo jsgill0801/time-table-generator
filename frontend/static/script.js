@@ -1,21 +1,20 @@
 (function () {
     const STORAGE_KEYS = {
-        selectedView: "ttg.selectedView",
-        generation: "ttg.generation"
+        selectedView: "ttg.selectedView"
     };
 
     const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
     const SIDEBAR_ITEMS = [
-        { id: "dashboard", label: "Dashboard", href: "dashboard.html" },
-        { id: "courses", label: "Courses", href: "courses.html" },
-        { id: "faculty", label: "Faculty", href: "faculty.html" },
-        { id: "rooms", label: "Rooms", href: "rooms.html" },
-        { id: "batches", label: "Batches", href: "batches.html" },
-        { id: "categories", label: "Categories", href: "categories.html" },
-        { id: "slots", label: "Slots", href: "slots.html" },
-        { id: "timetable", label: "Timetable", href: "timetable.html" }
+        { id: "dashboard", label: "Dashboard", href: "/dashboard" },
+        { id: "faculty", label: "Faculty", href: "/faculty" },
+        { id: "rooms", label: "Rooms", href: "/rooms" },
+        { id: "batches", label: "Batches", href: "/batches" },
+        { id: "categories", label: "Categories", href: "/categories" },
+        { id: "slots", label: "Slots", href: "/slots" },
+        { id: "courses", label: "Courses", href: "/courses" },
+        { id: "timetable", label: "Timetable", href: "/timetable" }
     ];
 
     const RESOURCE_SINGULAR_LABELS = {
@@ -33,6 +32,10 @@
     let activeResourceModalState = null;
     let confirmationModalElements = null;
     let pendingDeleteState = null;
+    let currentUser = null;
+    let currentUserResolved = false;
+    let currentUserPromise = null;
+    let adminBootstrapPromise = null;
 
     const RESOURCE_CONFIGS = {
         courses: {
@@ -54,18 +57,10 @@
                 { key: "labHours", label: "Lab Hours" },
                 { key: "credits", label: "Credits" },
                 { key: "batchCategories", label: "BATCH-CATEGORY" },
+                { key: "studentsEnrolled", label: "Students Enrolled" },
                 { key: "faculty", label: "Faculty" }
             ],
-            rows: [
-                { code: "ICT201", name: "Data Structures", category: "Core Theory", credits: "4", semester: "Sem 2" },
-                { code: "ICT203", name: "Database Systems", category: "Core Theory", credits: "4", semester: "Sem 4" },
-                { code: "ICT205", name: "Operating Systems", category: "Core Theory", credits: "4", semester: "Sem 4" },
-                { code: "ICT207", name: "Digital Logic Lab", category: "Lab", credits: "2", semester: "Sem 2" },
-                { code: "ICT209", name: "Software Engineering", category: "Core Theory", credits: "3", semester: "Sem 6" },
-                { code: "ICT211", name: "Machine Learning", category: "Elective", credits: "3", semester: "Sem 6" },
-                { code: "ICT213", name: "Network Security", category: "Elective", credits: "3", semester: "Sem 6" },
-                { code: "ICT215", name: "Python Programming Lab", category: "Lab", credits: "2", semester: "Sem 4" }
-            ]
+            rows: []
         },
         faculty: {
             title: "Faculty",
@@ -86,16 +81,7 @@
                 { key: "email", label: "Email" },
                 { key: "load", label: "Weekly Load", badge: "secondary" }
             ],
-            rows: [
-                { facultyId: "FAC-01", name: "Dr. Meera Shah", email: "meera.shah@college.edu", load: "18 hrs" },
-                { facultyId: "FAC-02", name: "Prof. Kunal Desai", email: "kunal.desai@college.edu", load: "16 hrs" },
-                { facultyId: "FAC-03", name: "Dr. Nidhi Trivedi", email: "nidhi.trivedi@college.edu", load: "12 hrs" },
-                { facultyId: "FAC-04", name: "Prof. Aditi Rao", email: "aditi.rao@college.edu", load: "15 hrs" },
-                { facultyId: "FAC-05", name: "Dr. Rahul Menon", email: "rahul.menon@college.edu", load: "10 hrs" },
-                { facultyId: "FAC-06", name: "Prof. Hiral Patel", email: "hiral.patel@college.edu", load: "11 hrs" },
-                { facultyId: "FAC-07", name: "Dr. Sagar Joshi", email: "sagar.joshi@college.edu", load: "13 hrs" },
-                { facultyId: "FAC-08", name: "Prof. Neha Vyas", email: "neha.vyas@college.edu", load: "9 hrs" }
-            ]
+            rows: []
         },
         rooms: {
             title: "Rooms",
@@ -107,7 +93,7 @@
             metrics: function (rows) {
                 return [
                     { label: "Rooms", value: rows.length, detail: "Available to schedule." },
-                    { label: "Largest Capacity", value: "72", detail: "Seats in the largest room." }
+                    { label: "Largest Capacity", value: maxValue(rows, "capacity"), detail: "Seats in the largest room." }
                 ];
             },
             highlights: [],
@@ -115,14 +101,7 @@
                 { key: "room", label: "Room" },
                 { key: "capacity", label: "Capacity" }
             ],
-            rows: [
-                { room: "A-101", capacity: "60" },
-                { room: "A-103", capacity: "48" },
-                { room: "B-204", capacity: "72" },
-                { room: "LAB-201", capacity: "36" },
-                { room: "LAB-203", capacity: "32" },
-                { room: "C-110", capacity: "40" }
-            ]
+            rows: []
         },
         batches: {
             title: "Batches",
@@ -149,14 +128,7 @@
                 { key: "semester", label: "Semester", badge: "secondary" },
                 { key: "section", label: "Section", badge: "accent" }
             ],
-            rows: [
-                { batch: "ICT Sem 2 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 2", section: "A", strength: "62" },
-                { batch: "ICT Sem 2 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 2", section: "B", strength: "58" },
-                { batch: "ICT Sem 4 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 4", section: "A", strength: "54" },
-                { batch: "ICT Sem 4 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 4", section: "B", strength: "51" },
-                { batch: "ICT Sem 6 A", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 6", section: "A", strength: "47" },
-                { batch: "ICT Sem 6 B", program: "B.Tech ICT", branch: "Information and Communication Technology", semester: "Sem 6", section: "B", strength: "45" }
-            ]
+            rows: []
         },
         categories: {
             title: "Categories",
@@ -174,13 +146,7 @@
             columns: [
                 { key: "name", label: "Category" }
             ],
-            rows: [
-                { name: "Core Theory" },
-                { name: "Lab" },
-                { name: "Elective" },
-                { name: "Skill Module" },
-                { name: "Professional" }
-            ]
+            rows: []
         },
         slots: {
             title: "Slots",
@@ -201,70 +167,249 @@
                 { key: "endTime", label: "End Time" },
                 { key: "dayOfWeek", label: "Day of the Week" }
             ],
-            rows: [
-                { slotName: "Slot-1", startTime: "08:30", endTime: "09:20", dayOfWeek: "Monday" },
-                { slotName: "Slot-2", startTime: "09:25", endTime: "10:15", dayOfWeek: "Monday" },
-                { slotName: "Slot-3", startTime: "10:30", endTime: "11:20", dayOfWeek: "Monday" },
-                { slotName: "Slot-4", startTime: "11:25", endTime: "12:15", dayOfWeek: "Monday" },
-                { slotName: "Slot-5", startTime: "13:00", endTime: "13:50", dayOfWeek: "Monday" },
-                { slotName: "Slot-6", startTime: "14:00", endTime: "15:50", dayOfWeek: "Monday" },
-                { slotName: "Slot-7", startTime: "16:00", endTime: "16:50", dayOfWeek: "Monday" }
-            ]
+            rows: []
         }
     };
 
-    const MASTER_TIMETABLE_TEMPLATE = [
-        { day: "Monday", slot: "08:30 - 09:20", course: "Data Structures", faculty: "Dr. Meera Shah", room: "B-204", batch: "ICT Sem 2 A", category: "Core Theory" },
-        { day: "Monday", slot: "09:25 - 10:15", course: "Database Systems", faculty: "Prof. Kunal Desai", room: "A-101", batch: "ICT Sem 4 A", category: "Core Theory" },
-        { day: "Monday", slot: "10:30 - 11:20", course: "Software Engineering", faculty: "Prof. Aditi Rao", room: "A-103", batch: "ICT Sem 6 A", category: "Core Theory" },
-        { day: "Monday", slot: "14:00 - 15:50", course: "Digital Logic Lab", faculty: "Prof. Kunal Desai", room: "LAB-201", batch: "ICT Sem 2 B", category: "Lab" },
-        { day: "Tuesday", slot: "08:30 - 09:20", course: "Operating Systems", faculty: "Dr. Nidhi Trivedi", room: "B-204", batch: "ICT Sem 4 B", category: "Core Theory" },
-        { day: "Tuesday", slot: "09:25 - 10:15", course: "Professional Communication", faculty: "Prof. Neha Vyas", room: "C-110", batch: "ICT Sem 2 A", category: "Professional" },
-        { day: "Tuesday", slot: "10:30 - 11:20", course: "Machine Learning", faculty: "Dr. Rahul Menon", room: "A-103", batch: "ICT Sem 6 B", category: "Elective" },
-        { day: "Tuesday", slot: "14:00 - 15:50", course: "Python Programming Lab", faculty: "Prof. Kunal Desai", room: "LAB-203", batch: "ICT Sem 4 A", category: "Lab" },
-        { day: "Wednesday", slot: "08:30 - 09:20", course: "Data Structures", faculty: "Dr. Meera Shah", room: "A-101", batch: "ICT Sem 2 B", category: "Core Theory" },
-        { day: "Wednesday", slot: "09:25 - 10:15", course: "Network Security", faculty: "Prof. Hiral Patel", room: "A-103", batch: "ICT Sem 6 A", category: "Elective" },
-        { day: "Wednesday", slot: "10:30 - 11:20", course: "Database Systems", faculty: "Prof. Kunal Desai", room: "B-204", batch: "ICT Sem 4 B", category: "Core Theory" },
-        { day: "Wednesday", slot: "13:00 - 13:50", course: "Software Engineering", faculty: "Prof. Aditi Rao", room: "A-101", batch: "ICT Sem 6 B", category: "Core Theory" },
-        { day: "Thursday", slot: "08:30 - 09:20", course: "Operating Systems", faculty: "Dr. Nidhi Trivedi", room: "A-103", batch: "ICT Sem 4 A", category: "Core Theory" },
-        { day: "Thursday", slot: "09:25 - 10:15", course: "Data Structures", faculty: "Dr. Meera Shah", room: "B-204", batch: "ICT Sem 2 A", category: "Core Theory" },
-        { day: "Thursday", slot: "14:00 - 15:50", course: "Python Programming Lab", faculty: "Prof. Kunal Desai", room: "LAB-203", batch: "ICT Sem 4 B", category: "Lab" },
-        { day: "Friday", slot: "08:30 - 09:20", course: "Machine Learning", faculty: "Dr. Rahul Menon", room: "A-101", batch: "ICT Sem 6 A", category: "Elective" },
-        { day: "Friday", slot: "09:25 - 10:15", course: "Professional Communication", faculty: "Prof. Neha Vyas", room: "C-110", batch: "ICT Sem 2 B", category: "Professional" },
-        { day: "Friday", slot: "10:30 - 11:20", course: "Network Security", faculty: "Prof. Hiral Patel", room: "A-103", batch: "ICT Sem 6 B", category: "Elective" },
-        { day: "Friday", slot: "13:00 - 13:50", course: "Software Engineering", faculty: "Prof. Aditi Rao", room: "B-204", batch: "ICT Sem 6 A", category: "Core Theory" }
-    ];
+    let MASTER_TIMETABLE_TEMPLATE = [];
+    let latestGeneration = null;
 
     const TIMETABLE_VIEWS = {
         overall: {
             title: "Overall",
             description: "Combined file for all batches.",
-            filename: "overall-timetable.xls"
+            filename: "overall-timetable.xlsx"
         },
         faculty: {
             title: "Faculty-wise",
             description: "One file grouped by faculty.",
-            filename: "faculty-wise-timetable.xls"
+            filename: "faculty-wise-timetable.xlsx"
         },
         rooms: {
             title: "Room-wise",
             description: "One file grouped by room.",
-            filename: "room-wise-timetable.xls"
+            filename: "room-wise-timetable.xlsx"
         },
         batches: {
             title: "Batch-wise",
             description: "One file grouped by batch.",
-            filename: "batch-wise-timetable.xls"
+            filename: "batch-wise-timetable.xlsx"
         }
     };
 
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", async function () {
         buildSidebar();
         setupAuthForms();
+        await loadResourceDataFromAPI();
         setupDashboardPage();
         renderResourcePage();
         setupTimetablePage();
+        setupCSVImportForms();
     });
+
+    function isAuthPage() {
+        return Boolean(document.getElementById("loginForm") || document.getElementById("signupForm"));
+    }
+
+    async function loadCurrentUser() {
+        if (currentUserResolved) {
+            return currentUser;
+        }
+
+        if (currentUserPromise) {
+            return currentUserPromise;
+        }
+
+        currentUserPromise = API.me()
+            .then(function (response) {
+                currentUser = response && response.user ? response.user : null;
+                currentUserResolved = true;
+                return currentUser;
+            })
+            .catch(function () {
+                currentUser = null;
+                currentUserResolved = true;
+                return null;
+            })
+            .finally(function () {
+                currentUserPromise = null;
+            });
+
+        return currentUserPromise;
+    }
+
+    function hasAnySeededData(counts) {
+        return [
+            "courses",
+            "batches",
+            "faculties",
+            "classrooms",
+            "slots",
+            "categories",
+            "batch_courses",
+            "faculty_courses"
+        ].some(function (key) {
+            return Number(counts[key] || 0) > 0;
+        });
+    }
+
+    async function ensureAdminDemoData() {
+        if (isAuthPage()) {
+            return null;
+        }
+
+        if (adminBootstrapPromise) {
+            return adminBootstrapPromise;
+        }
+
+        adminBootstrapPromise = (async function () {
+            const user = await loadCurrentUser();
+
+            if (!user || user.role !== "admin") {
+                return null;
+            }
+
+            const countResponse = await API.counts().catch(function () {
+                return null;
+            });
+            const counts = countResponse && countResponse.counts ? countResponse.counts : null;
+
+            if (!counts || hasAnySeededData(counts)) {
+                return null;
+            }
+
+            return API.bootstrapAdminDemo().catch(function (error) {
+                if (!error || error.status !== 409) {
+                    console.warn("Unable to load admin demo data.", error);
+                }
+
+                return null;
+            });
+        })();
+
+        return adminBootstrapPromise;
+    }
+
+    async function loadResourceDataFromAPI() {
+        if (isAuthPage()) return;
+
+        await loadCurrentUser();
+        await ensureAdminDemoData();
+
+        try {
+            const [courses, batches, faculty, rooms, categories, slots, batchCourses, facultyCourses, timetableResponse, conflictsResponse] = await Promise.all([
+                API.listCourses().catch(() => []),
+                API.listBatches().catch(() => []),
+                API.listFaculty().catch(() => []),
+                API.listClassrooms().catch(() => []),
+                API.listCategories().catch(() => []),
+                API.listSlots().catch(() => []),
+                API.listBatchCourses().catch(() => []),
+                API.listFacultyCourses().catch(() => []),
+                API.timetable().catch(() => ({ timetable: [], generated_at: null })),
+                API.conflicts().catch(() => ({ conflicts: [] })),
+            ]);
+            RESOURCE_CONFIGS.batches.rows = (Array.isArray(batches) ? batches : []).map(function(b) {
+                return { id: b.batch_id, batch: b.label || (b.program+" "+b.branch+" Sem "+b.semester+" "+(b.section || "")), program: b.program, branch: b.branch, semester: String(b.semester), section: b.section || "", strength: "0" };
+            });
+            RESOURCE_CONFIGS.faculty.rows = (Array.isArray(faculty) ? faculty : []).map(function(f) {
+                return { facultyId: f.faculty_code, name: f.faculty_name, email: f.faculty_email, load: f.max_load+" hrs", maximumLoad: String(f.max_load) };
+            });
+            RESOURCE_CONFIGS.rooms.rows = (Array.isArray(rooms) ? rooms : []).map(function(r) {
+                return { room: r.classroom_name, capacity: String(r.capacity), status: "Active" };
+            });
+            RESOURCE_CONFIGS.categories.rows = (Array.isArray(categories) ? categories : []).map(function(c) {
+                return { id: c.category_id, name: c.category_name };
+            });
+            RESOURCE_CONFIGS.slots.rows = (Array.isArray(slots) ? slots : []).map(function(s) {
+                var st = String(s.start_time||""); if(st.length>5) st=st.substring(0,5);
+                var et = String(s.end_time||""); if(et.length>5) et=et.substring(0,5);
+                return { slotId: s.slot_id, slotName: s.slot_name, startTime: st, endTime: et, dayOfWeek: s.day_of_week, time: st+" - "+et };
+            });
+
+            const batchCourseRows = Array.isArray(batchCourses) ? batchCourses : [];
+            const facultyCourseRows = Array.isArray(facultyCourses) ? facultyCourses : [];
+            const facultyByCode = {};
+
+            RESOURCE_CONFIGS.faculty.rows.forEach(function(row) {
+                facultyByCode[row.facultyId] = row;
+            });
+
+            RESOURCE_CONFIGS.courses.rows = (Array.isArray(courses) ? courses : []).map(function(c) {
+                const courseBatchMappings = batchCourseRows
+                    .filter(function(bc) { return Number(bc.course_id) === Number(c.course_id); })
+                    .map(function(bc) {
+                        return {
+                            mappingId: bc.auto_id,
+                            batch: bc.batch_label,
+                            batchId: bc.batch_id,
+                            category: bc.category_name || "",
+                            categoryId: bc.category_id || "",
+                            studentsEnrolled: String(bc.students_enrolled || 1)
+                        };
+                    });
+                const courseFacultyMappings = facultyCourseRows
+                    .filter(function(fc) { return Number(fc.course_id) === Number(c.course_id); });
+                const primaryFaculty = courseFacultyMappings[0] || null;
+                const facultyCode = primaryFaculty ? primaryFaculty.faculty_code : "";
+                const facultyRow = facultyCode ? facultyByCode[facultyCode] : null;
+
+                return {
+                    id: c.course_id,
+                    code: c.course_code,
+                    name: c.course_name,
+                    lectureHours: String(c.lectures || 0),
+                    tutorialHours: String(c.tutorials || 0),
+                    labHours: String(c.labs || 0),
+                    credits: String(c.credits || 0),
+                    studentsEnrolled: String(
+                        courseBatchMappings.length ? Number(courseBatchMappings[0].studentsEnrolled || 1) : 1
+                    ),
+                    batchCategories: courseBatchMappings,
+                    facultyCode: facultyCode,
+                    faculty: facultyRow ? facultyRow.name : (primaryFaculty ? primaryFaculty.faculty_name || facultyCode : ""),
+                    facultyMappings: courseFacultyMappings
+                };
+            });
+
+            latestGeneration = buildGenerationFromBackend(timetableResponse, conflictsResponse);
+            if (latestGeneration) {
+                storeGeneration(latestGeneration);
+            }
+            MASTER_TIMETABLE_TEMPLATE = latestGeneration ? latestGeneration.schedule.slice() : [];
+        } catch(e) { console.warn("Data load failed", e); }
+    }
+
+    function setupCSVImportForms() {
+        document.querySelectorAll(".import-form").forEach(function(form) {
+            form.addEventListener("submit", async function(e) {
+                e.preventDefault();
+                var btn = form.querySelector('button[type="submit"]');
+                var origText = btn.textContent;
+                btn.disabled = true; btn.textContent = "Uploading...";
+                try {
+                    var fd = new FormData(form);
+                    var action = form.getAttribute("action");
+                    var resp = await fetch(action, { method:"POST", credentials:"include", body:fd });
+                    var data = await resp.json().catch(function(){return {};});
+                    if (!resp.ok) {
+                        alert(buildApiErrorMessage(data, "Import failed."));
+                        return;
+                    }
+                    alert(data.message||"Import complete.");
+                    await API.clearTimetable().catch(function(){ return null; });
+                    await loadResourceDataFromAPI();
+                    var page = document.body.dataset.resourcePage;
+                    if (page && RESOURCE_CONFIGS[page]) {
+                        var si = document.querySelector("[data-resource-search]");
+                        refreshResourceDataView(RESOURCE_CONFIGS[page], si);
+                    }
+                    setDashboardStatCounts();
+                } catch(err) { alert(buildApiErrorMessage(err, "Upload failed. Check server.")); }
+                finally { btn.disabled=false; btn.textContent=origText; }
+            });
+        });
+    }
 
     window.logout = handleLogout;
 
@@ -358,7 +503,7 @@
                 return;
             }
 
-            window.location.href = "dashboard.html";
+            window.location.href = "/dashboard";
         } catch (error) {
             setError(errorBox, "Unable to reach the login service right now. Please verify the server is running.");
         } finally {
@@ -400,7 +545,7 @@
                 return;
             }
 
-            window.location.href = "login.html";
+            window.location.href = "/login";
         } catch (error) {
             setError(errorBox, "Unable to reach the signup service right now. Please verify the server is running.");
         } finally {
@@ -424,18 +569,139 @@
         }
 
         runButton.addEventListener("click", async function () {
-            setButtonBusy(runButton, true, "Running...");
+            // #region agent log
+            fetch('http://127.0.0.1:7305/ingest/20e5ec9d-8ac9-4437-998b-fdadc17eb559',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecec21'},body:JSON.stringify({sessionId:'ecec21',runId:'dashboard-run-click',hypothesisId:'H11',location:'script.js:setupDashboardPage:click',message:'Run button clicked',data:{buttonDisabled:!!runButton.disabled,currentLabel:runButton.textContent||''},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            setButtonBusy(runButton, true, "Generating...");
 
             try {
-                await delay(1200);
-
-                const generation = createGenerationPayload();
-                storeGeneration(generation);
+                // #region agent log
+                fetch('http://127.0.0.1:7305/ingest/20e5ec9d-8ac9-4437-998b-fdadc17eb559',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecec21'},body:JSON.stringify({sessionId:'ecec21',runId:'dashboard-run-click',hypothesisId:'H11',location:'script.js:setupDashboardPage:beforeGenerate',message:'Calling API.generate',data:{},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                const result = await API.generate();
+                // #region agent log
+                fetch('http://127.0.0.1:7305/ingest/20e5ec9d-8ac9-4437-998b-fdadc17eb559',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecec21'},body:JSON.stringify({sessionId:'ecec21',runId:'dashboard-run-click',hypothesisId:'H11',location:'script.js:setupDashboardPage:afterGenerate',message:'API.generate resolved',data:{status:(result&&result.status)||'',scheduled_sessions:(result&&result.scheduled_sessions)||null},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                await refreshLatestGenerationFromAPI(result);
+                const generation = getStoredGeneration();
                 renderDashboardReport(generation);
+            } catch(err) {
+                // #region agent log
+                fetch('http://127.0.0.1:7305/ingest/20e5ec9d-8ac9-4437-998b-fdadc17eb559',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecec21'},body:JSON.stringify({sessionId:'ecec21',runId:'dashboard-run-click',hypothesisId:'H11',location:'script.js:setupDashboardPage:catch',message:'API.generate failed',data:{error:(err&&err.message)||'',status:(err&&err.status)||null},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                alert(buildApiErrorMessage(err, "Generation failed. Ensure data is imported first."));
             } finally {
                 setButtonBusy(runButton, false, "Run");
             }
         });
+    }
+
+    async function refreshLatestGenerationFromAPI(generateResult) {
+        const [timetableResponse, conflictsResponse] = await Promise.all([
+            API.timetable().catch(function () { return { timetable: [], generated_at: null }; }),
+            API.conflicts().catch(function () { return { conflicts: [] }; })
+        ]);
+        storeGeneration(buildGenerationFromBackend(timetableResponse, conflictsResponse, generateResult));
+    }
+
+    function buildGenerationFromBackend(timetableResponse, conflictsResponse, generateResult) {
+        const rows = timetableResponse && Array.isArray(timetableResponse.timetable)
+            ? timetableResponse.timetable
+            : [];
+        const conflicts = conflictsResponse && Array.isArray(conflictsResponse.conflicts)
+            ? conflictsResponse.conflicts
+            : [];
+
+        if (!rows.length && !conflicts.length && !generateResult) {
+            return null;
+        }
+
+        const schedule = rows.map(mapTimetableRowToScheduleEntry).sort(compareScheduleEntries);
+        const generatedAt = (
+            timetableResponse && timetableResponse.generated_at
+        ) || (
+            rows.find(function(row) { return row.generated_at; }) || {}
+        ).generated_at || (
+            generateResult && generateResult.generated_at
+        ) || new Date().toISOString();
+
+        return {
+            generatedAt: generatedAt,
+            report: buildBackendGenerationReport(schedule, conflicts, generateResult),
+            schedule: schedule
+        };
+    }
+
+    function mapTimetableRowToScheduleEntry(row) {
+        const start = String(row.start_time || "").substring(0, 5);
+        const end = String(row.end_time || "").substring(0, 5);
+
+        return {
+            id: row.auto_id,
+            day: row.day_of_week || "",
+            slot: start && end ? start + " - " + end : row.slot_name || "",
+            slotName: row.slot_name || "",
+            course: row.course_name || row.course_code || "",
+            courseCode: row.course_code || "",
+            faculty: row.faculty_code || "",
+            room: row.classroom_name || "",
+            batch: row.batch_label || "",
+            category: row.category_name || ""
+        };
+    }
+
+    function buildBackendGenerationReport(schedule, conflicts, generateResult) {
+        const conflictItems = (Array.isArray(conflicts) ? conflicts : []).map(function(conflict) {
+            return {
+                title: (conflict.course_code || "Course") + (conflict.course_name ? " - " + conflict.course_name : ""),
+                badge: conflict.course_code || "Issue",
+                meta: "Batch: " + (conflict.batch_label || "Not mapped") + " | Faculty: " + (conflict.faculty_code || "Unassigned"),
+                reason: conflict.reason || "This session could not be placed."
+            };
+        });
+        const scheduledCourses = new Set(schedule.map(function(entry) {
+            return entry.courseCode || entry.course;
+        }).filter(Boolean));
+        const configuredCourses = new Set(RESOURCE_CONFIGS.courses.rows.map(function(row) {
+            return row.code;
+        }).filter(Boolean));
+        conflictItems.forEach(function(conflict) {
+            if (conflict.badge && conflict.badge !== "Issue") {
+                configuredCourses.add(conflict.badge);
+            }
+        });
+
+        const totalCourses = generateResult && Number.isFinite(Number(generateResult.total_courses))
+            ? Number(generateResult.total_courses)
+            : configuredCourses.size;
+        const totalSessions = generateResult && Number.isFinite(Number(generateResult.total_sessions))
+            ? Number(generateResult.total_sessions)
+            : schedule.length + conflictItems.length;
+        const scheduledSessions = generateResult && Number.isFinite(Number(generateResult.scheduled_sessions))
+            ? Number(generateResult.scheduled_sessions)
+            : schedule.length;
+        const totalIssues = generateResult && Number.isFinite(Number(generateResult.conflicts_count))
+            ? Number(generateResult.conflicts_count)
+            : conflictItems.length;
+
+        return {
+            totalCourses: totalSessions || totalCourses,
+            coursesScheduled: scheduledSessions || scheduledCourses.size,
+            courseUsageNote: scheduledSessions + " of " + totalSessions + " required session(s) placed.",
+            courseClashes: totalIssues,
+            facultyClashes: 0,
+            roomConflicts: 0,
+            slotConflicts: 0,
+            courseNote: totalIssues ? totalIssues + " unresolved session(s)." : "All required sessions were placed.",
+            facultyNote: "Faculty conflicts are checked by the backend scheduler.",
+            roomNote: "Room conflicts are checked by the backend scheduler.",
+            slotNote: "Slot conflicts are checked by the backend scheduler.",
+            conflictSummary: totalIssues
+                ? totalIssues + " unresolved scheduling issue(s) in the latest run."
+                : "No unresolved scheduling conflicts in the latest run.",
+            conflicts: conflictItems,
+            totalIssues: totalIssues
+        };
     }
 
     function renderDashboardReport(generation) {
@@ -699,8 +965,9 @@
                     { key: "tutorialHours", label: "Tutorial Hours", type: "text", inputMode: "decimal", required: true, numeric: true },
                     { key: "labHours", label: "Lab Hours", type: "text", inputMode: "decimal", required: true, numeric: true },
                     { key: "credits", label: "Credits", type: "text", inputMode: "decimal", required: true, numeric: true },
+                    { key: "studentsEnrolled", label: "Students Enrolled", type: "text", inputMode: "numeric", required: true, numeric: true },
                     { key: "batchCategories", label: "Batches", type: "batch-category-selector", required: true },
-                    { key: "faculty", label: "Faculty", type: "select", source: "faculty", optionValue: "name", optionLabel: "name", required: true },
+                    { key: "faculty", label: "Faculty", type: "select", source: "faculty", optionValue: "facultyId", optionLabel: "name", required: true },
                 ],
                 toRow: createCourseResourceRow
             };
@@ -986,7 +1253,6 @@
         const batchSelect = selector ? selector.querySelector("[data-batch-picker]") : null;
         const categorySelect = selector ? selector.querySelector("[data-category-picker]") : null;
         const hiddenInput = selector ? selector.querySelector('[data-field-input="batchCategories"]') : null;
-
         if (!selector || !batchSelect || !categorySelect || !hiddenInput) {
             return;
         }
@@ -1003,7 +1269,6 @@
         categorySelect.addEventListener("change", function () {
             const batch = batchSelect.value;
             const category = categorySelect.value;
-
             if (!batch || !category) {
                 return;
             }
@@ -1234,8 +1499,9 @@
                 tutorialHours: row.tutorialHours || "0",
                 labHours: row.labHours || inferCourseHourValue(row, "lab"),
                 credits: row.credits || "",
+                studentsEnrolled: row.studentsEnrolled || "1",
                 batchCategories: normalizeCourseBatchCategories(row),
-                faculty: row.faculty || findFacultyForCourse(row) || ""
+                faculty: row.facultyCode || findFacultyCodeForCourse(row) || ""
             };
         }
 
@@ -1350,7 +1616,7 @@
         });
     }
 
-    function handleResourceFormSubmit(event) {
+    async function handleResourceFormSubmit(event) {
         event.preventDefault();
 
         if (!activeResourceModalState) {
@@ -1370,17 +1636,25 @@
             return;
         }
 
-        if (activeResourceModalState.mode === "edit") {
-            activeResourceModalState.config.rows[activeResourceModalState.rowIndex] = schema.toRow(
+        setButtonBusy(modal.submitButton, true, activeResourceModalState.mode === "edit" ? "Saving..." : "Adding...");
+
+        try {
+            await persistResourceForm(
+                schema.id,
                 values,
+                activeResourceModalState.mode,
                 activeResourceModalState.config.rows[activeResourceModalState.rowIndex]
             );
-        } else {
-            activeResourceModalState.config.rows.push(schema.toRow(values));
+            await API.clearTimetable().catch(function() { return null; });
+            await loadResourceDataFromAPI();
+            refreshResourceDataView(activeResourceModalState.config, activeResourceModalState.searchInput);
+            setDashboardStatCounts();
+            closeResourceModal();
+        } catch (error) {
+            setError(modal.formError, error.error || error.message || "Unable to save this entry.");
+        } finally {
+            setButtonBusy(modal.submitButton, false, activeResourceModalState && activeResourceModalState.mode === "edit" ? "Edit" : "Add");
         }
-
-        refreshResourceDataView(activeResourceModalState.config, activeResourceModalState.searchInput);
-        closeResourceModal();
     }
 
     function collectResourceFormValues(form, schema) {
@@ -1430,6 +1704,22 @@
                 }
             });
 
+        if (schema.id === "courses" && Array.isArray(values.batchCategories)) {
+            const invalidSelection = values.batchCategories.find(function (item) {
+                return !item;
+            });
+            if (invalidSelection) {
+                errors.batchCategories = "Each batch-category entry must be valid.";
+            }
+        }
+
+        if (
+            schema.id === "courses"
+            && (!Number.isFinite(Number(values.studentsEnrolled)) || Number(values.studentsEnrolled) < 1)
+        ) {
+            errors.studentsEnrolled = "Students Enrolled must be at least 1.";
+        }
+
         if (schema.id === "slots" && values.startTime && values.endTime) {
             const startMinutes = timeToMinutes(values.startTime);
             const endMinutes = timeToMinutes(values.endTime);
@@ -1440,6 +1730,187 @@
         }
 
         return errors;
+    }
+
+    async function persistResourceForm(resourceId, values, mode, existingRow) {
+        if (resourceId === "courses") {
+            return persistCourse(values, mode, existingRow);
+        }
+
+        if (resourceId === "faculty") {
+            const payload = {
+                faculty_code: values.facultyCode,
+                faculty_name: values.facultyName,
+                faculty_email: values.facultyEmail,
+                max_load: values.maximumLoad
+            };
+            return mode === "edit"
+                ? API.updateFaculty(existingRow.facultyId, payload)
+                : API.createFaculty(payload);
+        }
+
+        if (resourceId === "rooms") {
+            const payload = {
+                classroom_name: values.classroomName,
+                capacity: values.capacity
+            };
+            return mode === "edit"
+                ? API.updateClassroom(existingRow.room, payload)
+                : API.createClassroom(payload);
+        }
+
+        if (resourceId === "batches") {
+            const payload = {
+                program: values.program,
+                branch: values.branch,
+                semester: parseSemesterValue(values.semester),
+                section: values.section
+            };
+            return mode === "edit"
+                ? API.updateBatch(existingRow.id, payload)
+                : API.createBatch(payload);
+        }
+
+        if (resourceId === "categories") {
+            const payload = { category_name: values.categoryName };
+            return mode === "edit"
+                ? API.updateCategory(existingRow.id, payload)
+                : API.createCategory(payload);
+        }
+
+        if (resourceId === "slots") {
+            const payload = {
+                slot_name: values.slotName,
+                day_of_week: values.dayOfWeek,
+                start_time: values.startTime,
+                end_time: values.endTime
+            };
+            return mode === "edit"
+                ? API.updateSlot(existingRow.slotId, payload)
+                : API.createSlot(payload);
+        }
+
+        return Promise.resolve();
+    }
+
+    async function persistCourse(values, mode, existingRow) {
+        const payload = {
+            course_code: values.code,
+            course_name: values.name,
+            lectures: values.lectureHours,
+            tutorials: values.tutorialHours,
+            labs: values.labHours,
+            credits: values.credits
+        };
+        const course = mode === "edit"
+            ? await API.updateCourse(existingRow.id, payload)
+            : await API.createCourse(payload);
+        const courseId = course.course_id || (existingRow && existingRow.id);
+
+        await syncCourseBatchMappings(courseId, values.batchCategories || [], existingRow, values.studentsEnrolled);
+        await syncCourseFacultyMapping(courseId, values.faculty, existingRow);
+
+        return course;
+    }
+
+    async function syncCourseBatchMappings(courseId, selections, existingRow, totalStudentsEnrolled) {
+        const existingMappings = existingRow && Array.isArray(existingRow.batchCategories)
+            ? existingRow.batchCategories
+            : [];
+
+        for (const mapping of existingMappings) {
+            if (mapping.mappingId) {
+                await API.deleteBatchCourse(mapping.mappingId).catch(function(error) {
+                    if (error.status !== 404) {
+                        throw error;
+                    }
+                });
+            }
+        }
+
+        for (const selection of selections) {
+            const batchId = selection.batchId || getBatchIdByLabel(selection.batch);
+            const categoryId = selection.categoryId || getCategoryIdByName(selection.category);
+
+            if (!batchId) {
+                throw new Error("Selected batch is no longer available.");
+            }
+
+            await API.createBatchCourse({
+                course_id: courseId,
+                batch_id: batchId,
+                category_id: categoryId || null,
+                students_enrolled: totalStudentsEnrolled || "1"
+            });
+        }
+    }
+
+    async function syncCourseFacultyMapping(courseId, facultyCode, existingRow) {
+        const existingMappings = existingRow && Array.isArray(existingRow.facultyMappings)
+            ? existingRow.facultyMappings
+            : [];
+
+        for (const mapping of existingMappings) {
+            if (mapping.auto_id) {
+                await API.deleteFacultyCourse(mapping.auto_id).catch(function(error) {
+                    if (error.status !== 404) {
+                        throw error;
+                    }
+                });
+            }
+        }
+
+        if (facultyCode) {
+            await API.createFacultyCourse({
+                course_id: courseId,
+                faculty_code: facultyCode
+            });
+        }
+    }
+
+    async function deleteResourceRow(resourceId, row) {
+        await API.clearTimetable().catch(function() { return null; });
+
+        if (resourceId === "courses") {
+            return API.deleteCourse(row.id);
+        }
+        if (resourceId === "faculty") {
+            return API.deleteFaculty(row.facultyId);
+        }
+        if (resourceId === "rooms") {
+            return API.deleteClassroom(row.room);
+        }
+        if (resourceId === "batches") {
+            return API.deleteBatch(row.id);
+        }
+        if (resourceId === "categories") {
+            return API.deleteCategory(row.id);
+        }
+        if (resourceId === "slots") {
+            return API.deleteSlot(row.slotId);
+        }
+        return Promise.resolve();
+    }
+
+    function getBatchIdByLabel(label) {
+        const row = RESOURCE_CONFIGS.batches.rows.find(function(batch) {
+            return batch.batch === label;
+        });
+
+        return row ? row.id : null;
+    }
+
+    function getCategoryIdByName(name) {
+        const row = RESOURCE_CONFIGS.categories.rows.find(function(category) {
+            return category.name === name;
+        });
+
+        return row ? row.id : null;
+    }
+
+    function parseSemesterValue(value) {
+        const match = String(value || "").match(/\d+/);
+        return match ? Number(match[0]) : value;
     }
 
     function showResourceFormErrors(form, formError, errors) {
@@ -1609,14 +2080,29 @@
         return confirmationModalElements;
     }
 
-    function confirmResourceDelete() {
+    async function confirmResourceDelete() {
         if (!pendingDeleteState) {
             return;
         }
 
-        pendingDeleteState.config.rows.splice(pendingDeleteState.rowIndex, 1);
-        refreshResourceDataView(pendingDeleteState.config, pendingDeleteState.searchInput);
-        closeDeleteConfirmationModal();
+        const state = pendingDeleteState;
+        const resourcePage = document.body.dataset.resourcePage;
+
+        setButtonBusy(confirmationModalElements.confirmButton, true, "Deleting...");
+
+        try {
+            await deleteResourceRow(resourcePage, state.config.rows[state.rowIndex]);
+            await loadResourceDataFromAPI();
+            refreshResourceDataView(state.config, state.searchInput);
+            setDashboardStatCounts();
+            closeDeleteConfirmationModal();
+        } catch (error) {
+            alert(error.error || error.message || "Unable to delete this entry.");
+        } finally {
+            if (confirmationModalElements) {
+                setButtonBusy(confirmationModalElements.confirmButton, false, "Confirm Delete");
+            }
+        }
     }
 
     function closeDeleteConfirmationModal() {
@@ -1712,6 +2198,10 @@
             return selection.batch + " " + selection.category;
         });
 
+        const facultyRow = RESOURCE_CONFIGS.faculty.rows.find(function (row) {
+            return row.facultyId === values.faculty;
+        });
+
         return {
             code: values.code,
             name: values.name,
@@ -1721,7 +2211,9 @@
             lectureHours: values.lectureHours,
             tutorialHours: values.tutorialHours,
             labHours: values.labHours,
-            faculty: values.faculty,
+            studentsEnrolled: values.studentsEnrolled,
+            facultyCode: values.faculty,
+            faculty: facultyRow ? facultyRow.name : values.faculty,
             batchCategories: batchCategories.slice()
         };
     }
@@ -1777,7 +2269,11 @@
             return row.batchCategories.map(function (selection) {
                 return {
                     batch: selection.batch,
-                    category: selection.category
+                    batchId: selection.batchId,
+                    category: selection.category,
+                    categoryId: selection.categoryId,
+                    mappingId: selection.mappingId,
+                    studentsEnrolled: selection.studentsEnrolled || "1"
                 };
             });
         }
@@ -1859,11 +2355,28 @@
     }
 
     function findFacultyForCourse(row) {
+        if (row.faculty) {
+            return row.faculty;
+        }
+
         const scheduleEntry = MASTER_TIMETABLE_TEMPLATE.find(function (entry) {
             return entry.course === row.name;
         });
 
         return scheduleEntry ? scheduleEntry.faculty : "";
+    }
+
+    function findFacultyCodeForCourse(row) {
+        if (row.facultyCode) {
+            return row.facultyCode;
+        }
+
+        const facultyName = findFacultyForCourse(row);
+        const facultyRow = RESOURCE_CONFIGS.faculty.rows.find(function (entry) {
+            return entry.name === facultyName || entry.facultyId === facultyName;
+        });
+
+        return facultyRow ? facultyRow.facultyId : "";
     }
 
     function inferCourseHourValue(row, kind) {
@@ -2142,14 +2655,11 @@
         });
 
         downloadButton.addEventListener("click", function () {
-            const currentView = getStoredValue(STORAGE_KEYS.selectedView, "overall");
             const currentGeneration = getStoredGeneration();
-
-            if (!currentGeneration) {
-                return;
-            }
-
-            downloadTimetableWorkbook(currentView, currentGeneration.schedule, currentGeneration.generatedAt);
+            if (!currentGeneration) { return; }
+            const currentView = getStoredValue(STORAGE_KEYS.selectedView, "overall");
+            const url = (API.downloadUrls && API.downloadUrls[currentView]) || API.downloadUrl;
+            window.location.href = url;
         });
 
         renderTimetableView(selectedView, generation);
@@ -2415,13 +2925,9 @@
     }
 
     function setDashboardStatCounts() {
-        const activeRooms = RESOURCE_CONFIGS.rooms.rows.filter(function (row) {
-            return String(row.status || "Active").toLowerCase() === "active";
-        }).length;
-
         setText("courseCount", RESOURCE_CONFIGS.courses.rows.length);
         setText("facultyCount", RESOURCE_CONFIGS.faculty.rows.length);
-        setText("roomCount", activeRooms);
+        setText("roomCount", RESOURCE_CONFIGS.rooms.rows.length);
         setText("batchCount", RESOURCE_CONFIGS.batches.rows.length);
         setText("categoryCount", RESOURCE_CONFIGS.categories.rows.length);
         setText("slotCount", RESOURCE_CONFIGS.slots.rows.length);
@@ -2768,23 +3274,13 @@
 
     function getRequiredSessionsForCourse(row) {
         const lectureHours = parseNumericValue(row.lectureHours);
-        const tutorialHours = parseNumericValue(row.tutorialHours);
-        const labHours = parseNumericValue(row.labHours);
-        const explicitSessions = lectureHours + tutorialHours + normalizeLabHoursToBlocks(labHours);
+        const explicitSessions = lectureHours;
 
         if (explicitSessions > 0) {
             return explicitSessions;
         }
 
         return getCourseCategoryText(row).includes("lab") ? 1 : 3;
-    }
-
-    function normalizeLabHoursToBlocks(labHours) {
-        if (!labHours) {
-            return 0;
-        }
-
-        return Math.max(1, Math.ceil(labHours / 2));
     }
 
     function parseNumericValue(value) {
@@ -2843,32 +3339,26 @@
         }).catch(function () {
             return null;
         }).finally(function () {
-            window.location.href = "login.html";
+            window.location.href = "/login";
         });
     }
 
     function getStoredGeneration() {
-        const raw = getStoredValue(STORAGE_KEYS.generation, "");
-
-        if (!raw) {
-            return null;
-        }
-
-        try {
-            return JSON.parse(raw);
-        } catch (error) {
-            return null;
-        }
+        return latestGeneration;
     }
 
     function storeGeneration(payload) {
-        saveStoredValue(STORAGE_KEYS.generation, JSON.stringify(payload));
+        latestGeneration = payload || null;
+        MASTER_TIMETABLE_TEMPLATE = latestGeneration && Array.isArray(latestGeneration.schedule)
+            ? latestGeneration.schedule.slice()
+            : [];
         saveStoredValue(STORAGE_KEYS.selectedView, "overall");
     }
 
     function clearStoredGeneration() {
+        latestGeneration = null;
+        MASTER_TIMETABLE_TEMPLATE = [];
         try {
-            localStorage.removeItem(STORAGE_KEYS.generation);
             localStorage.removeItem(STORAGE_KEYS.selectedView);
         } catch (error) {
             return;
@@ -2905,6 +3395,23 @@
         return response.json().catch(function () {
             return {};
         });
+    }
+
+    function buildApiErrorMessage(payload, fallback) {
+        const baseMessage = payload && (payload.error || payload.message)
+            ? String(payload.error || payload.message)
+            : fallback;
+        const details = payload && Array.isArray(payload.errors)
+            ? payload.errors.filter(Boolean)
+            : [];
+
+        if (!details.length) {
+            return baseMessage;
+        }
+
+        return baseMessage + "\n\n" + details.map(function (detail, index) {
+            return (index + 1) + ". " + detail;
+        }).join("\n");
     }
 
     function saveStoredValue(key, value) {
@@ -2962,6 +3469,15 @@
 
             if (column.key === "batchCategories") {
                 return normalizeCourseBatchCategories(row);
+            }
+
+            if (column.key === "studentsEnrolled") {
+                const value = Number(row.studentsEnrolled || 0);
+                if (value > 0) {
+                    return String(value);
+                }
+                const mappings = normalizeCourseBatchCategories(row);
+                return String(mappings.length ? Number(mappings[0].studentsEnrolled || 1) : 1);
             }
 
             if (column.key === "faculty") {

@@ -18,7 +18,7 @@ from backend.models.batch_course import BatchCourse
 from backend.models.course import Course
 from backend.models.batch import Batch
 from backend.models.category import Category
-from backend.routes.auth_routes import login_required
+from backend.routes.auth_routes import login_required, admin_required
 from backend.utils.helpers import format_ltpc
 
 
@@ -64,7 +64,7 @@ def list_batch_courses():
 
 
 @batch_course_bp.route("/", methods=["POST"])
-@login_required
+@admin_required
 def create_batch_course():
     """Assign a course to a batch."""
     data = request.get_json()
@@ -106,7 +106,7 @@ def create_batch_course():
 
 
 @batch_course_bp.route("/<int:auto_id>", methods=["PUT"])
-@login_required
+@admin_required
 def update_batch_course(auto_id):
     """Update a batch-course mapping (enrollment count or category)."""
     data = request.get_json()
@@ -133,7 +133,7 @@ def update_batch_course(auto_id):
 
 
 @batch_course_bp.route("/<int:auto_id>", methods=["DELETE"])
-@login_required
+@admin_required
 def delete_batch_course(auto_id):
     """Remove a course from a batch."""
     db = next(get_db())

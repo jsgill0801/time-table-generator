@@ -13,8 +13,8 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.slot import Slot
-from backend.routes.auth_routes import login_required
-from backend.utils.helpers import DAY_ORDER
+from backend.routes.auth_routes import login_required, admin_required
+from backend.utils.helpers import DAY_ORDER, build_slot_id, normalize_day_name
 
 
 slot_bp = Blueprint("slots", __name__)
@@ -55,28 +55,35 @@ def get_slot(slot_id):
 
 
 @slot_bp.route("/", methods=["POST"])
-@login_required
+@admin_required
 def create_slot():
     """Create a new time slot."""
     data = request.get_json()
     db = next(get_db())
     try:
-        sid = data["slot_id"].strip()
+        from datetime import time
+        day_of_week = normalize_day_name(data["day_of_week"])
+        start_parts = data["start_time"].strip().split(":")
+        end_parts = data["end_time"].strip().split(":")
+        start_time = time(int(start_parts[0]), int(start_parts[1]))
+        end_time = time(int(end_parts[0]), int(end_parts[1]))
+        slot_name = data.get("slot_name", "").strip() or None
+        sid = (data.get("slot_id") or "").strip() or build_slot_id(
+            day_of_week,
+            data["start_time"],
+            slot_name,
+        )
 
         existing = db.query(Slot).get(sid)
         if existing:
             return jsonify({"error": "A slot with this ID already exists."}), 409
 
-        from datetime import time
-        start_parts = data["start_time"].strip().split(":")
-        end_parts = data["end_time"].strip().split(":")
-
         slot = Slot(
             slot_id=sid,
-            day_of_week=data["day_of_week"].strip().title(),
-            start_time=time(int(start_parts[0]), int(start_parts[1])),
-            end_time=time(int(end_parts[0]), int(end_parts[1])),
-            slot_name=data.get("slot_name", "").strip() or None,
+            day_of_week=day_of_week,
+            start_time=start_time,
+            end_time=end_time,
+            slot_name=slot_name,
         )
         db.add(slot)
         db.commit()
@@ -91,7 +98,7 @@ def create_slot():
 
 
 @slot_bp.route("/<string:slot_id>", methods=["PUT"])
-@login_required
+@admin_required
 def update_slot(slot_id):
     """Update an existing slot."""
     data = request.get_json()
@@ -104,7 +111,7 @@ def update_slot(slot_id):
         from datetime import time
 
         if "day_of_week" in data:
-            slot.day_of_week = data["day_of_week"].strip().title()
+            slot.day_of_week = normalize_day_name(data["day_of_week"])
         if "start_time" in data:
             parts = data["start_time"].strip().split(":")
             slot.start_time = time(int(parts[0]), int(parts[1]))
@@ -126,7 +133,7 @@ def update_slot(slot_id):
 
 
 @slot_bp.route("/<string:slot_id>", methods=["DELETE"])
-@login_required
+@admin_required
 def delete_slot(slot_id):
     """Delete a slot by its ID."""
     db = next(get_db())

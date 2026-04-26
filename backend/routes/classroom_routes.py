@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.classroom import Classroom
-from backend.routes.auth_routes import login_required
+from backend.routes.auth_routes import login_required, admin_required
 
 
 classroom_bp = Blueprint("classrooms", __name__)
@@ -46,7 +46,7 @@ def get_classroom(classroom_name):
 
 
 @classroom_bp.route("/", methods=["POST"])
-@login_required
+@admin_required
 def create_classroom():
     """Create a new classroom."""
     data = request.get_json()
@@ -75,7 +75,7 @@ def create_classroom():
 
 
 @classroom_bp.route("/<string:classroom_name>", methods=["PUT"])
-@login_required
+@admin_required
 def update_classroom(classroom_name):
     """Update an existing classroom's capacity."""
     data = request.get_json()
@@ -100,7 +100,7 @@ def update_classroom(classroom_name):
 
 
 @classroom_bp.route("/<string:classroom_name>", methods=["DELETE"])
-@login_required
+@admin_required
 def delete_classroom(classroom_name):
     """Delete a classroom by its name."""
     db = next(get_db())

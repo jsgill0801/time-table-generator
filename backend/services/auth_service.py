@@ -12,7 +12,13 @@ from backend.models.user import User
 from backend.utils.errors import AuthError
 
 
-def create_user(db: Session, username: str, email: str, password: str) -> User:
+def create_user(
+    db: Session,
+    username: str,
+    email: str,
+    password: str,
+    role: str = "user",
+) -> User:
     """
     Register a new user.
 
@@ -33,6 +39,7 @@ def create_user(db: Session, username: str, email: str, password: str) -> User:
         username=username,
         email=email,
         password_hash=generate_password_hash(password),
+        role=role,
     )
 
     db.add(user)

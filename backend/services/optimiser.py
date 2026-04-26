@@ -32,6 +32,7 @@ WEIGHTS = {
     "edge_slots": 1.0,
     "day_spread": 2.0,
     "room_changes": 1.5,
+    "category_slot_alignment": 1.5,
 }
 
 # Default number of improvement attempts
@@ -183,7 +184,37 @@ class Optimiser:
                 if a["classroom_name"] == a2["classroom_name"]:
                     return False
 
+        # Keep hard constraint: no consecutive lectures for same faculty.
+        if not self._check_no_consecutive_after_swap(a1, a2, slot2):
+            return False
+        if not self._check_no_consecutive_after_swap(a2, a1, slot1):
+            return False
+
         return True
+
+    def _check_no_consecutive_after_swap(self, target: dict, other: dict, new_slot_id: str) -> bool:
+        faculty_code = target.get("faculty_code")
+        if not faculty_code:
+            return True
+        if new_slot_id not in self.slot_position:
+            return True
+
+        day, pos = self.slot_position[new_slot_id]
+        occupied_positions = set()
+
+        for a in self.assignments:
+            if a is target:
+                continue
+            slot_id = new_slot_id if a is other else a["slot_id"]
+            if a.get("faculty_code") != faculty_code:
+                continue
+            if slot_id not in self.slot_position:
+                continue
+            s_day, s_pos = self.slot_position[slot_id]
+            if s_day == day:
+                occupied_positions.add(s_pos)
+
+        return (pos - 1) not in occupied_positions and (pos + 1) not in occupied_positions
 
     def _swap(self, a1: dict, a2: dict):
         """Swap the slot assignments between two entries."""
@@ -206,6 +237,7 @@ class Optimiser:
         score += WEIGHTS["edge_slots"] * self._penalty_edge_slots()
         score += WEIGHTS["day_spread"] * self._penalty_day_spread()
         score += WEIGHTS["room_changes"] * self._penalty_room_changes()
+        score += WEIGHTS["category_slot_alignment"] * self._penalty_category_slot_alignment()
 
         return score
 
@@ -296,3 +328,17 @@ class Optimiser:
         )
 
         return float(total_changes)
+
+    def _penalty_category_slot_alignment(self) -> float:
+        """
+        Penalise categories spread across too many distinct slot IDs.
+        Lower values push same-category classes toward recurring slots.
+        """
+        category_slots = defaultdict(set)
+        for a in self.assignments:
+            category = (a.get("category_name") or "").strip()
+            if not category:
+                continue
+            category_slots[category].add(a["slot_id"])
+
+        return float(sum(max(len(slots) - 1, 0) for slots in category_slots.values()))

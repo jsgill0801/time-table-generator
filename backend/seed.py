@@ -278,6 +278,30 @@ def seed_faculty_courses(db) -> int:
     return count
 
 
+SEED_STEPS = [
+    ("courses", seed_courses),
+    ("batches", seed_batches),
+    ("faculty", seed_faculty),
+    ("classrooms", seed_classrooms),
+    ("slots", seed_slots),
+    ("batch_courses", seed_batch_courses),
+    ("faculty_courses", seed_faculty_courses),
+]
+
+
+def seed_dataset(db) -> tuple[dict[str, int], int]:
+    """Seed the sample dataset and return per-step counts plus the total."""
+    summary = {}
+    total = 0
+
+    for key, func in SEED_STEPS:
+        count = func(db)
+        summary[key] = count
+        total += count
+
+    return summary, total
+
+
 def run_seed():
     """
     Execute the full seeding process in dependency order.
@@ -291,22 +315,20 @@ def run_seed():
     try:
         print("\nSeeding sample data:")
         print("-" * 40)
+        summary, total = seed_dataset(db)
 
-        steps = [
-            ("Courses", seed_courses),
-            ("Batches", seed_batches),
-            ("Faculty", seed_faculty),
-            ("Classrooms", seed_classrooms),
-            ("Slots", seed_slots),
-            ("Batch-Courses", seed_batch_courses),
-            ("Faculty-Courses", seed_faculty_courses),
-        ]
+        labels = {
+            "courses": "Courses",
+            "batches": "Batches",
+            "faculty": "Faculty",
+            "classrooms": "Classrooms",
+            "slots": "Slots",
+            "batch_courses": "Batch-Courses",
+            "faculty_courses": "Faculty-Courses",
+        }
 
-        total = 0
-        for label, func in steps:
-            count = func(db)
-            total += count
-            print(f"  {label:20s} -> {count} record(s) inserted")
+        for key, count in summary.items():
+            print(f"  {labels[key]:20s} -> {count} record(s) inserted")
 
         print("-" * 40)
         print(f"  Total: {total} record(s) inserted")

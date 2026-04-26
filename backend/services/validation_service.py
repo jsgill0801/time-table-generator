@@ -26,7 +26,7 @@ from backend.models.faculty_course import FacultyCourse
 from backend.models.category import Category
 
 from backend.utils.errors import ValidationError
-from backend.utils.helpers import format_ltpc
+from backend.utils.helpers import calculate_required_sessions, format_ltpc
 
 
 class ValidationService:
@@ -89,7 +89,7 @@ class ValidationService:
         missing = assigned_course_ids - faculty_assigned_ids
 
         for course_id in missing:
-            course = self.session.query(Course).get(course_id)
+            course = self.session.get(Course, course_id)
 
             if course:
                 errors.append(
@@ -192,7 +192,12 @@ class ValidationService:
             .all()
         )
 
-        total_demand = sum(course.lectures for _, course in batch_courses)
+        total_demand = sum(
+            calculate_required_sessions(
+                course.lectures, course.tutorials, course.labs,
+            )
+            for _, course in batch_courses
+        )
 
         if total_demand > total_capacity:
             errors.append(
@@ -244,7 +249,12 @@ class ValidationService:
                 .count()
             )
 
-            entry["assigned"] += course.lectures * batch_count
+            entry["assigned"] += (
+                calculate_required_sessions(
+                    course.lectures, course.tutorials, course.labs,
+                )
+                * batch_count
+            )
 
         for code, info in faculty_load.items():
             if info["assigned"] > info["max"]:
@@ -364,7 +374,9 @@ class ValidationService:
 
         batch_demand = defaultdict(int)
         for bc, course, batch in batch_courses:
-            batch_demand[batch.label] += course.lectures
+            batch_demand[batch.label] += calculate_required_sessions(
+                course.lectures, course.tutorials, course.labs,
+            )
 
         for batch_label, demand in batch_demand.items():
             if demand > available_slots:

@@ -12,6 +12,7 @@ from flask import Blueprint, request, jsonify, session
 from backend.db import get_db
 from backend.services.auth_service import create_user, authenticate_user
 from backend.utils.errors import AuthError
+from backend.models.user import User
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -30,6 +31,35 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if "user_id" not in session:
             return jsonify({"error": "Authentication required."}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+# -----------------------------------------------------------------
+#  Decorator: protect routes that require admin role
+# -----------------------------------------------------------------
+
+def admin_required(f):
+    """
+    Decorator that blocks non-admin requests.
+    Requires a valid session and role == 'admin'.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return jsonify({"error": "Authentication required."}), 401
+
+        db = next(get_db())
+        try:
+            user = db.query(User).filter(User.user_id == session["user_id"]).first()
+            if not user:
+                session.clear()
+                return jsonify({"error": "User not found."}), 404
+            if user.role != "admin":
+                return jsonify({"error": "Admin privileges required."}), 403
+        finally:
+            db.close()
+
         return f(*args, **kwargs)
     return decorated
 
@@ -61,7 +91,9 @@ def signup():
     # Create the user
     try:
         db = next(get_db())
-        user = create_user(db, username, email, password)
+        existing_users = db.query(User).count()
+        role = "admin" if existing_users == 0 else "user"
+        user = create_user(db, username, email, password, role=role)
 
         return jsonify({
             "message": "Account created successfully.",

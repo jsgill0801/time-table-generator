@@ -24,6 +24,7 @@ env/
 
 # Generated output files
 output/
+logs/
 
 # OS files
 .DS_Store
@@ -33,5 +34,20 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
+.pytest-tmp/
+.test-output/
+
+# SQLite databases
+*.db
+
+# Flask session files
+flask_session/
 
 .early.coverage
+
+*.xlsx
+*.log
+*.cursor
+.cursor/
+.cursor
+*.cache

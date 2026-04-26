@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batches | Timetable Generator</title>
-    <link rel="stylesheet" href="../static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="app-page" data-page="batches" data-resource-page="batches">
     <div class="app-shell">
@@ -60,16 +60,13 @@
                             <button class="modal-submit-button" type="submit">Upload CSV</button>
                         </form>
                         <p class="import-note">Required columns: <strong>program, branch, semester, section</strong></p>
-                        <pre class="csv-example">program,branch,semester,section
-BTech,Computer Science,4,A
-BTech,Information Technology,6,B
-MTech,Electronics,2,A</pre>
                     </div>
                 </aside>
             </section>
         </main>
     </div>
 
-    <script src="../static/script.js" defer></script>
+    <script src="/static/api.js" defer></script><script src="/static/script.js" defer></script>
 </body>
 </html>
+

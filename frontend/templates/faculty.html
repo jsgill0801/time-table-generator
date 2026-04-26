@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Faculty | Timetable Generator</title>
-    <link rel="stylesheet" href="../static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="app-page" data-page="faculty" data-resource-page="faculty">
     <div class="app-shell">
@@ -61,16 +61,13 @@
                             <button class="modal-submit-button" type="submit">Upload CSV</button>
                         </form>
                         <p class="import-note">Required columns: <strong>faculty_code, faculty_name, faculty_email, max_load</strong></p>
-                        <pre class="csv-example">faculty_code,faculty_name,faculty_email,max_load
-PD,Dr. Priya Desai,pd@college.edu,18
-AV,Prof. Amit Verma,av@college.edu,16
-SS,Dr. Sneha Sharma,ss@college.edu,14</pre>
                     </div>
                 </aside>
             </section>
         </main>
     </div>
 
-    <script src="../static/script.js" defer></script>
+    <script src="/static/api.js" defer></script><script src="/static/script.js" defer></script>
 </body>
 </html>
+

@@ -21,6 +21,16 @@ def valid_course_csv():
 
 
 @pytest.fixture
+def valid_course_bundle_csv():
+    return (
+        "course_code,course_name,lectures,tutorials,labs,credits,batches,faculty\n"
+        "IT205,Data Structures,3,0,0,3,"
+        "\"BTech Sem-IV (ICT) Sec-A|Core|55;BTech Sem-IV (ICT) Sec-B|Core\","
+        "PD\n"
+    )
+
+
+@pytest.fixture
 def valid_batch_csv():
     return (
         "program,branch,semester,section\n"
@@ -53,6 +63,15 @@ def valid_slot_csv():
         "slot_id,day_of_week,start_time,end_time,slot_name\n"
         "MON-0800,Monday,8:00,8:50,Slot-1\n"
         "MON-0900,Monday,9:00,9:50,Slot-5\n"
+    )
+
+
+@pytest.fixture
+def valid_slot_csv_without_id():
+    return (
+        "day_of_week,start_time,end_time,slot_name\n"
+        "Monday,8:00,8:50,s01\n"
+        "Tuesday,9:00,9:50,s02\n"
     )
 
 

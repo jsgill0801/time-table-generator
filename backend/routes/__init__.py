@@ -18,6 +18,7 @@ from backend.routes.import_routes import import_bp
 from backend.routes.generate_routes import generate_bp
 from backend.routes.timetable_routes import timetable_bp
 from backend.routes.data_routes import data_bp
+from backend.routes.export_routes import export_bp
 
 
 def register_blueprints(app):
@@ -36,3 +37,4 @@ def register_blueprints(app):
     app.register_blueprint(generate_bp, url_prefix="/api/v1/generate")
     app.register_blueprint(timetable_bp, url_prefix="/api/v1/timetable")
     app.register_blueprint(data_bp, url_prefix="/api/v1/data")
+    app.register_blueprint(export_bp, url_prefix="/api/v1/export")

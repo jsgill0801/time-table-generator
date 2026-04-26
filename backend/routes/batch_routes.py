@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.batch import Batch
-from backend.routes.auth_routes import login_required
+from backend.routes.auth_routes import login_required, admin_required
 
 
 batch_bp = Blueprint("batches", __name__)
@@ -50,7 +50,7 @@ def get_batch(batch_id):
 
 
 @batch_bp.route("/", methods=["POST"])
-@login_required
+@admin_required
 def create_batch():
     """Create a new batch."""
     data = request.get_json()
@@ -75,7 +75,7 @@ def create_batch():
 
 
 @batch_bp.route("/<int:batch_id>", methods=["PUT"])
-@login_required
+@admin_required
 def update_batch(batch_id):
     """Update an existing batch."""
     data = request.get_json()
@@ -106,7 +106,7 @@ def update_batch(batch_id):
 
 
 @batch_bp.route("/<int:batch_id>", methods=["DELETE"])
-@login_required
+@admin_required
 def delete_batch(batch_id):
     """Delete a batch by its ID."""
     db = next(get_db())
