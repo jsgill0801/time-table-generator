@@ -2,7 +2,6 @@
 Shared helper functions used across the backend.
 """
 
-
 def format_ltpc(lectures, tutorials, labs, credits):
     """
     Format L-T-P-C credit components into a display string.
@@ -18,6 +17,14 @@ def format_ltpc(lectures, tutorials, labs, credits):
         credits_str = str(credits)
 
     return f"{lectures}-{tutorials}-{labs}-{credits_str}"
+
+
+def calculate_required_sessions(lectures, tutorials=0, labs=0):
+    """
+    Return required weekly sessions for scheduling.
+    The requirement is based strictly on the "Number of Lecture Hours" field.
+    """
+    return int(lectures or 0)
 
 
 def build_batch_label(program, semester, branch=None, section=None):
@@ -83,3 +90,26 @@ def sort_key_for_slot(slot_dict):
     """
     day_rank = DAY_ORDER.get(slot_dict["day_of_week"], 99)
     return (day_rank, slot_dict["start_time"])
+
+
+def normalize_day_name(value):
+    """Normalize a weekday string to title case."""
+    return str(value or "").strip().title()
+
+
+def build_slot_id(day_of_week, start_time, slot_name=None):
+    """
+    Build a stable slot identifier.
+
+    Uses the day/time combination so slot names can repeat safely across
+    the weekly rotation.
+    """
+    day = normalize_day_name(day_of_week)
+    prefix = day[:3].upper() or "DAY"
+    time_value = str(start_time or "").strip()
+    clean_time = time_value.replace(":", "")[:4]
+
+    if len(clean_time) < 4:
+        clean_time = clean_time.ljust(4, "0")
+
+    return (prefix + clean_time)[:10]

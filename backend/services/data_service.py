@@ -7,6 +7,9 @@ and builds the data structures that the scheduler expects.
 """
 
 from collections import defaultdict
+import json
+import os
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -22,6 +25,7 @@ from backend.models.faculty_course import FacultyCourse
 from backend.utils.helpers import (
     format_ltpc,
     build_batch_label,
+    calculate_required_sessions,
     DAY_ORDER,
 )
 
@@ -39,6 +43,11 @@ class DataService:
 
     def __init__(self, db_session: Session):
         self.session = db_session
+        self._debug_log_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "debug-ecec21.log",
+        )
+        self._run_id = f"data_{int(datetime.now().timestamp() * 1000)}"
 
     # =================================================================
     #  FETCHERS – pull raw data from the database
@@ -294,28 +303,70 @@ class DataService:
 
         # Build the demand list
         demand = []
-
+        grouped_by_course = defaultdict(list)
         for bc in batch_courses:
-            # Find faculty assigned to this course
-            faculty_codes = course_faculty_map.get(bc["course_id"], [])
+            grouped_by_course[bc["course_id"]].append(bc)
 
-            # Use the first assigned faculty, or None if unassigned
-            # (validation_service will catch unassigned courses later)
-            faculty_code = faculty_codes[0] if faculty_codes else None
+        for course_id, grouped in grouped_by_course.items():
+            grouped_sorted = sorted(grouped, key=lambda x: x["batch_label"])
+            course_total_sessions = calculate_required_sessions(
+                grouped_sorted[0]["lectures"],
+                grouped_sorted[0]["tutorials"],
+                grouped_sorted[0]["labs"],
+            )
+            mapping_count = len(grouped_sorted)
+            base = int(course_total_sessions // mapping_count) if mapping_count else 0
+            remainder = int(course_total_sessions % mapping_count) if mapping_count else 0
 
-            # If multiple faculty teach jointly (e.g. "SS/VS"),
-            # they'll be stored as a single faculty_code in the DB
-            demand.append({
-                "batch_course_id": bc["auto_id"],
-                "course_code": bc["course_code"],
-                "course_name": bc["course_name"],
-                "batch_label": bc["batch_label"],
-                "faculty_code": faculty_code,
-                "lectures_required": bc["lectures"],
-                "students_enrolled": bc["students_enrolled"],
-                "category": bc["category_name"],
-                "ltpc": bc["ltpc"],
-            })
+            for idx, bc in enumerate(grouped_sorted):
+                # Find faculty assigned to this course
+                faculty_codes = course_faculty_map.get(bc["course_id"], [])
+
+                # Use the first assigned faculty, or None if unassigned
+                # (validation_service will catch unassigned courses later)
+                faculty_code = faculty_codes[0] if faculty_codes else None
+
+                lectures_required = base + (1 if idx < remainder else 0)
+
+                # If multiple faculty teach jointly (e.g. "SS/VS"),
+                # they'll be stored as a single faculty_code in the DB
+                demand.append({
+                    "batch_course_id": bc["auto_id"],
+                    "course_code": bc["course_code"],
+                    "course_name": bc["course_name"],
+                    "batch_label": bc["batch_label"],
+                    "faculty_code": faculty_code,
+                    "lectures_required": lectures_required,
+                    "students_enrolled": bc["students_enrolled"],
+                    "category": bc["category_name"],
+                    "ltpc": bc["ltpc"],
+                })
+
+        # region agent log
+        try:
+            sample = [
+                {
+                    "course_code": d["course_code"],
+                    "batch_label": d["batch_label"],
+                    "lectures_required": d["lectures_required"],
+                    "ltpc": d["ltpc"],
+                }
+                for d in demand[:10]
+            ]
+            payload = {
+                "sessionId": "ecec21",
+                "runId": self._run_id,
+                "hypothesisId": "H7",
+                "location": "data_service.py:build_batch_lecture_demand",
+                "message": "Built demand with required sessions",
+                "data": {"demand_count": len(demand), "sample": sample},
+                "timestamp": int(datetime.now().timestamp() * 1000),
+            }
+            with open(self._debug_log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+        except Exception:
+            pass
+        # endregion
 
         return demand
 

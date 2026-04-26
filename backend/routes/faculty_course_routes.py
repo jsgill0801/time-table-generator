@@ -15,7 +15,7 @@ from backend.db import get_db
 from backend.models.faculty_course import FacultyCourse
 from backend.models.course import Course
 from backend.models.faculty import Faculty
-from backend.routes.auth_routes import login_required
+from backend.routes.auth_routes import login_required, admin_required
 
 
 faculty_course_bp = Blueprint("faculty_courses", __name__)
@@ -52,7 +52,7 @@ def list_faculty_courses():
 
 
 @faculty_course_bp.route("/", methods=["POST"])
-@login_required
+@admin_required
 def create_faculty_course():
     """Assign a faculty member to a course."""
     data = request.get_json()
@@ -92,7 +92,7 @@ def create_faculty_course():
 
 
 @faculty_course_bp.route("/<int:auto_id>", methods=["DELETE"])
-@login_required
+@admin_required
 def delete_faculty_course(auto_id):
     """Remove a faculty-course assignment."""
     db = next(get_db())

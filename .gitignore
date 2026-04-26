@@ -34,6 +34,8 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
+.pytest-tmp/
+.test-output/
 
 # SQLite databases
 *.db
@@ -42,3 +44,10 @@ htmlcov/
 flask_session/
 
 .early.coverage
+
+*.xlsx
+*.log
+*.cursor
+.cursor/
+.cursor
+*.cache

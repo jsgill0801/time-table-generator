@@ -20,6 +20,7 @@ from backend.parsers.classroom_parser import ClassroomParser
 from backend.parsers.slot_parser import SlotParser
 from backend.parsers.batch_course_parser import BatchCourseParser
 from backend.parsers.faculty_course_parser import FacultyCourseParser
+from backend.parsers.course_bundle_parser import CourseBundleParser
 from backend.utils.errors import DataError
 
 
@@ -53,6 +54,57 @@ class TestCourseParser:
     def test_missing_required_field(self):
         csv = "course_code,course_name,lectures,tutorials,labs\nIT205,Data Structures,3,0,0\n"
         parser = CourseParser()
+
+        with pytest.raises(DataError):
+            parser.parse(csv)
+
+
+# =================================================================
+#  CourseBundleParser
+# =================================================================
+
+class TestCourseBundleParser:
+    """Tests for the combined courses import parser."""
+
+    def _get_parser(self):
+        known_batches = {
+            "BTech Sem-IV (ICT) Sec-A",
+            "BTech Sem-IV (ICT) Sec-B",
+        }
+        known_faculty = {
+            "PD": "PD",
+            "Prof. Divya": "PD",
+        }
+        return CourseBundleParser(known_batches, known_faculty)
+
+    def test_valid_csv(self, valid_course_bundle_csv):
+        parser = self._get_parser()
+        rows = parser.parse(valid_course_bundle_csv)
+
+        assert len(rows) == 1
+        assert rows[0]["course_code"] == "IT205"
+        assert rows[0]["faculty_code"] == "PD"
+        assert len(rows[0]["batch_mappings"]) == 2
+        assert rows[0]["batch_mappings"][0]["batch_label"] == "BTech Sem-IV (ICT) Sec-A"
+        assert rows[0]["batch_mappings"][0]["students_enrolled"] == 55
+
+    def test_accepts_faculty_name(self):
+        csv = (
+            "course_code,course_name,lectures,tutorials,labs,credits,batches,faculty\n"
+            "IT205,Data Structures,3,0,0,3,BTech Sem-IV (ICT) Sec-A|Core,Prof. Divya\n"
+        )
+        parser = self._get_parser()
+        rows = parser.parse(csv)
+
+        assert rows[0]["faculty_code"] == "PD"
+        assert rows[0]["batch_mappings"][0]["students_enrolled"] == 1
+
+    def test_unknown_batch_label(self):
+        csv = (
+            "course_code,course_name,lectures,tutorials,labs,credits,batches,faculty\n"
+            "IT205,Data Structures,3,0,0,3,BTech Sem-IV (CS) Sec-A|Core,PD\n"
+        )
+        parser = self._get_parser()
 
         with pytest.raises(DataError):
             parser.parse(csv)
@@ -190,6 +242,14 @@ class TestSlotParser:
 
         with pytest.raises(DataError):
             parser.parse(csv)
+
+    def test_slot_id_is_optional(self, valid_slot_csv_without_id):
+        parser = SlotParser()
+        rows = parser.parse(valid_slot_csv_without_id)
+
+        assert len(rows) == 2
+        assert rows[0]["slot_id"] == "MON0800"
+        assert rows[1]["slot_id"] == "TUE0900"
 
 
 # =================================================================

@@ -1,0 +1,9 @@
+course_code,course_name,lectures,tutorials,labs,credits,batches,faculty
+HM106,Professional Ethics,3,0,0,3,"BTech Sem-IV (ICT) Sec-A|Humanities|55;BTech Sem-IV (ICT) Sec-B|Humanities|50",PD
+IT205,Data Structures,3,0,0,3,"BTech Sem-IV (ICT) Sec-A|Core|55;BTech Sem-IV (ICT) Sec-B|Core|50",AV
+MA206,Probability and Statistics,3,1,0,4,"BTech Sem-IV (ICT) Sec-A|Core|55;BTech Sem-IV (ICT) Sec-B|Core|50;BTech Sem-IV (CS)|Core|80",AR2
+SC205,Signals and Systems,3,0,0,3,"BTech Sem-IV (ICT) Sec-A|Core|55",SS
+EL203,Embedded Hardware Design,3,0,2,4,"BTech Sem-IV (ICT) Sec-B|Core|50",RK
+IT207,Computer Organization,3,0,0,3,"BTech Sem-IV (CS)|Core|80",NP
+HM108,English Communication,2,0,0,2,"BTech Sem-IV (CS)|Humanities|80",PD
+CS201,Discrete Mathematics,3,0,0,3,"BTech Sem-IV (CS)|Core|80",RK

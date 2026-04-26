@@ -10,7 +10,7 @@ writer can read rows directly without complex joins.
 These fields are populated at generation time.
 """
 
-from sqlalchemy import Column, Integer, String, Time, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, DateTime, Integer, String, Time, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from backend.db import Base
@@ -20,6 +20,7 @@ class Timetable(Base):
     __tablename__ = "timetable"
 
     auto_id = Column(Integer, primary_key=True, autoincrement=True)
+    generated_at = Column(DateTime, nullable=True)
 
     # ----- Foreign keys (normalized references) -----
 
@@ -84,6 +85,7 @@ class Timetable(Base):
     def to_dict(self):
         return {
             "auto_id": self.auto_id,
+            "generated_at": self.generated_at.isoformat() if self.generated_at else None,
             "batch_course_id": self.batch_course_id,
             "faculty_code": self.faculty_code,
             "classroom_name": self.classroom_name,

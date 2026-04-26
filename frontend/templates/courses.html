@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Courses | Timetable Generator</title>
-    <link rel="stylesheet" href="../static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="app-page" data-page="courses" data-resource-page="courses">
     <div class="app-shell">
@@ -51,7 +51,7 @@
                         <div class="panel-heading">
                             <div>
                                 <h2>Import Courses</h2>
-                                <p class="panel-subtext">Upload a CSV file containing course definitions using the exact columns below.</p>
+                                <p class="panel-subtext">Upload one CSV using the same fields shown in the course form. Batches and faculty must already exist.</p>
                             </div>
                         </div>
                         <form class="import-form" action="/api/v1/import/courses" method="post" enctype="multipart/form-data">
@@ -61,17 +61,15 @@
                             </label>
                             <button class="modal-submit-button" type="submit">Upload CSV</button>
                         </form>
-                        <p class="import-note">Required columns: <strong>course_code, course_name, lectures, tutorials, labs, credits, batches-category, faculty</strong></p>
-                        <pre class="csv-example">course_code, course_name, lectures, tutorials, labs, credits, batches-category, faculty
-ICT201,Data Structures,4,0,0,4,ICT Sem 2 A - Core Theory, ICT Sem 2 B - Core Theory, Dr. Meera Shah
-ICT207,Digital Logic Lab,0,0,2,2
-ICT209,Software Engineering,3,0,0,3</pre>
+                        <p class="import-note">Required columns: <strong>course_code, course_name, lectures, tutorials, labs, credits, batches, faculty</strong></p>
+                        <p class="import-note import-note-detail">Use <strong>Batch Label|Category</strong> or <strong>Batch Label|Category|Students Enrolled</strong> inside <strong>batches</strong>, and separate multiple mappings with <strong>;</strong>. The <strong>faculty</strong> column accepts a faculty code or the exact faculty name.</p>
                     </div>
                 </aside>
             </section>
         </main>
     </div>
 
-    <script src="../static/script.js" defer></script>
+    <script src="/static/api.js" defer></script><script src="/static/script.js" defer></script>
 </body>
 </html>
+

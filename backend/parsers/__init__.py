@@ -13,6 +13,7 @@ from backend.parsers.classroom_parser import ClassroomParser
 from backend.parsers.slot_parser import SlotParser
 from backend.parsers.batch_course_parser import BatchCourseParser
 from backend.parsers.faculty_course_parser import FacultyCourseParser
+from backend.parsers.course_bundle_parser import CourseBundleParser
 
 __all__ = [
     "CourseParser",
@@ -22,4 +23,5 @@ __all__ = [
     "SlotParser",
     "BatchCourseParser",
     "FacultyCourseParser",
+    "CourseBundleParser",
 ]

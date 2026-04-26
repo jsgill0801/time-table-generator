@@ -10,6 +10,7 @@ from sqlalchemy import Column, Integer, String, UniqueConstraint, CheckConstrain
 from sqlalchemy.orm import relationship
 
 from backend.db import Base
+from backend.utils.helpers import build_batch_label
 
 
 class Batch(Base):
@@ -37,15 +38,12 @@ class Batch(Base):
     @property
     def label(self):
         """Human-readable label like 'BTech Sem-IV (ICT + CS) Sec-A'."""
-        parts = [self.program, f"Sem-{self.semester}"]
-
-        if self.branch:
-            parts.append(f"({self.branch})")
-
-        if self.section:
-            parts.append(f"Sec-{self.section}")
-
-        return " ".join(parts)
+        return build_batch_label(
+            self.program,
+            self.semester,
+            self.branch,
+            self.section,
+        )
 
     def to_dict(self):
         return {

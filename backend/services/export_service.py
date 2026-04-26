@@ -1,396 +1,518 @@
 """
 Excel export service.
 
-Converts the generated timetable data into an Excel workbook
-matching the university's Lecture Time Table format.
+Generates four separate Excel workbooks that replicate the exact layout of
+the university's official "Lecture_Time_Table" file:
 
-Generates three types of sheets:
-    1. Master sheet (all batches combined, slot-based grid)
-    2. Per-batch sheets (one sheet per batch label)
-    3. Faculty workload summary sheet
+    1. Overall timetable   — single sheet, all batches grouped by time-slot
+    2. Faculty-wise         — one sheet per faculty, same grid format
+    3. Batch-wise           — one sheet per batch, same grid format
+    4. Room-wise            — one sheet per room, same grid format
 
-The university format uses a grid layout:
-    Rows    = time slots (08:00–08:50, 09:00–09:50, ...)
-    Columns = days of the week (Monday–Friday)
-    Cells   = course code + faculty code + room
+Column layout per day (6 columns):
+    course_code | course_name | ltpc | category_name | faculty_code | classroom_name
 
-Usage:
-    from backend.services.export_service import ExportService
-
-    service = ExportService(timetable_rows)
-    filepath = service.generate()  # returns path to the .xlsx file
+Days start at columns:  D(4)  K(11)  R(18)  Y(25)  AF(32)
+Column C is a visual separator.
 """
 
 import os
 import logging
+import json
 from collections import defaultdict
 from datetime import datetime
 
 from openpyxl import Workbook
-from openpyxl.styles import (
-    Font, Alignment, Border, Side, PatternFill, NamedStyle,
-)
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 
-from backend.utils.helpers import DAY_ORDER
-
 logger = logging.getLogger(__name__)
+DEBUG_LOG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "debug-ecec21.log",
+)
 
-
-# -----------------------------------------------------------------
-#  Output directory
-# -----------------------------------------------------------------
 OUTPUT_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "output",
 )
 
+WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
-# -----------------------------------------------------------------
-#  Style constants
-# -----------------------------------------------------------------
+# Column where each day block begins (1-indexed)
+DAY_COL_START = {
+    "Monday": 4,     # D
+    "Tuesday": 11,   # K
+    "Wednesday": 18, # R
+    "Thursday": 25,  # Y
+    "Friday": 32,    # AF
+}
+# Each day block spans 6 columns: code, name, ltpc, category, faculty, room
+DAY_SPAN = 6
+
+# Detail fields within each day block (in order)
+DETAIL_KEYS = [
+    "course_code",
+    "course_name",
+    "ltpc",
+    "category_name",
+    "faculty_code",
+    "classroom_name",
+]
+
+# ---------- colour palette (matches the reference file) ----------
+TITLE_FONT = Font(name="Calibri", size=14, bold=True, color="C00000")
+SUBTITLE_FONT = Font(name="Calibri", size=12, bold=True, color="C00000")
+
 HEADER_FILL = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
 HEADER_FONT = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-SUBHEADER_FILL = PatternFill(start_color="D6E4F0", end_color="D6E4F0", fill_type="solid")
-SUBHEADER_FONT = Font(name="Calibri", size=10, bold=True, color="1F4E79")
-CELL_FONT = Font(name="Calibri", size=10)
-TITLE_FONT = Font(name="Calibri", size=14, bold=True, color="1F4E79")
-FREE_FILL = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
-BORDER = Border(
-    left=Side(style="thin"),
-    right=Side(style="thin"),
-    top=Side(style="thin"),
-    bottom=Side(style="thin"),
-)
-CENTER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
-LEFT_ALIGN = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
-# Days to include in the grid
-WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+SLOT_ROW_FILL = PatternFill(start_color="D6E4F0", end_color="D6E4F0", fill_type="solid")
+SLOT_ROW_FONT = Font(name="Calibri", size=10, bold=True, color="1F4E79")
+
+TIME_FONT = Font(name="Calibri", size=10, bold=True, color="1F4E79")
+BATCH_FONT = Font(name="Calibri", size=10, bold=True, color="333333")
+CELL_FONT = Font(name="Calibri", size=10)
+
+# Alternating batch row fills for readability
+BATCH_FILL_LIGHT = PatternFill(start_color="EBF1DE", end_color="EBF1DE", fill_type="solid")
+BATCH_FILL_ALT   = PatternFill(start_color="DAEEF3", end_color="DAEEF3", fill_type="solid")
+SEPARATOR_FILL   = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+
+THIN_BORDER = Border(
+    left=Side(style="thin", color="B4C6E7"),
+    right=Side(style="thin", color="B4C6E7"),
+    top=Side(style="thin", color="B4C6E7"),
+    bottom=Side(style="thin", color="B4C6E7"),
+)
+
+CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
+LEFT = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
 
 class ExportService:
-    """
-    Generates a styled Excel workbook from timetable data.
+    """Build Excel workbooks from timetable rows and slot definitions."""
 
-    Usage:
-        service = ExportService(timetable_rows)
-        filepath = service.generate()
-    """
+    def __init__(self, timetable_rows: list[dict], slots: list[dict] | None = None):
+        self.rows = timetable_rows or []
+        self.slots = slots or []
+        self._run_id = f"export_{int(datetime.now().timestamp() * 1000)}"
 
-    def __init__(self, timetable_rows: list[dict]):
-        """
-        Args:
-            timetable_rows: List of dicts from Timetable.to_dict().
-        """
-        self.rows = timetable_rows
+        # Pre-index data
+        self.by_batch: dict[str, list[dict]] = defaultdict(list)
+        self.by_faculty: dict[str, list[dict]] = defaultdict(list)
+        self.by_room: dict[str, list[dict]] = defaultdict(list)
 
-        # Organise rows by batch_label
-        self.by_batch = defaultdict(list)
         for row in self.rows:
             self.by_batch[row["batch_label"]].append(row)
+            if row.get("faculty_code"):
+                self.by_faculty[row["faculty_code"]].append(row)
+            if row.get("classroom_name"):
+                self.by_room[row["classroom_name"]].append(row)
 
-        # Collect all unique time slots and sort them
-        self.time_slots = self._extract_time_slots()
+        self.time_ranges = self._extract_time_ranges()
+        self.slot_grid = self._build_slot_grid()
+        self._debug_log(
+            hypothesis_id="H1",
+            location="export_service.py:__init__",
+            message="Initialized export service",
+            data={
+                "rows_count": len(self.rows),
+                "slots_count": len(self.slots),
+                "time_ranges_count": len(self.time_ranges),
+                "sample_days": sorted(list({str(r.get("day_of_week", "")) for r in self.rows}))[:10],
+            },
+        )
 
-        # Ensure the output directory exists
         os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    def generate(self) -> str:
-        """
-        Generate the Excel workbook and save it to disk.
+    # ------------------------------------------------------------------
+    #  Public API — each method returns a file path
+    # ------------------------------------------------------------------
 
-        Returns:
-            Absolute path to the generated .xlsx file.
-        """
+    def generate_overall(self) -> str:
+        """Overall timetable — single sheet, every batch."""
         wb = Workbook()
+        ws = wb.active
+        ws.title = "Time-Table"
+        self._write_overall_sheet(ws, self.rows)
+        return self._save(wb, "Overall_Timetable")
 
-        # Remove the default sheet
+    def generate_faculty_wise(self) -> str:
+        """Faculty-wise — one sheet per faculty."""
+        wb = Workbook()
         wb.remove(wb.active)
+        for fcode in sorted(self.by_faculty.keys()):
+            ws = wb.create_sheet(self._safe_sheet_name(fcode, wb))
+            self._write_overall_sheet(ws, self.by_faculty[fcode], subtitle=f"Faculty: {fcode}")
+        if not wb.sheetnames:
+            ws = wb.create_sheet("Empty")
+            ws["A1"] = "No faculty data available."
+        return self._save(wb, "Faculty_Wise_Timetable")
 
-        # Sheet 1: Master grid (all batches)
-        self._write_master_sheet(wb)
+    def generate_batch_wise(self) -> str:
+        """Batch-wise — one sheet per batch."""
+        wb = Workbook()
+        wb.remove(wb.active)
+        for blabel in sorted(self.by_batch.keys()):
+            ws = wb.create_sheet(self._safe_sheet_name(blabel, wb))
+            self._write_overall_sheet(ws, self.by_batch[blabel], subtitle=f"Batch: {blabel}")
+        if not wb.sheetnames:
+            ws = wb.create_sheet("Empty")
+            ws["A1"] = "No batch data available."
+        return self._save(wb, "Batch_Wise_Timetable")
 
-        # Sheet 2..N: One sheet per batch
-        for batch_label in sorted(self.by_batch.keys()):
-            self._write_batch_sheet(wb, batch_label)
+    def generate_room_wise(self) -> str:
+        """Room-wise — one sheet per room."""
+        wb = Workbook()
+        wb.remove(wb.active)
+        for rname in sorted(self.by_room.keys()):
+            ws = wb.create_sheet(self._safe_sheet_name(rname, wb))
+            self._write_overall_sheet(ws, self.by_room[rname], subtitle=f"Room: {rname}")
+        if not wb.sheetnames:
+            ws = wb.create_sheet("Empty")
+            ws["A1"] = "No room data available."
+        return self._save(wb, "Room_Wise_Timetable")
 
-        # Sheet N+1: Faculty workload summary
-        self._write_faculty_sheet(wb)
+    # ------------------------------------------------------------------
+    #  Sheet writer — reproduces the exact reference layout
+    # ------------------------------------------------------------------
 
-        # Save to file
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"Lecture_Time_Table_{timestamp}.xlsx"
-        filepath = os.path.join(OUTPUT_DIR, filename)
-
-        wb.save(filepath)
-        logger.info("Timetable exported to: %s", filepath)
-
-        return filepath
-
-    # =================================================================
-    #  MASTER SHEET – all batches in one grid
-    # =================================================================
-
-    def _write_master_sheet(self, wb: Workbook):
-        """Write the combined master timetable sheet."""
-        ws = wb.create_sheet("Master Timetable")
-
-        # Title row
-        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
-        title_cell = ws.cell(row=1, column=1, value="Lecture Time Table")
-        title_cell.font = TITLE_FONT
-        title_cell.alignment = CENTER_ALIGN
-
-        # Generation timestamp
-        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=6)
-        ts_cell = ws.cell(
-            row=2, column=1,
-            value=f"Generated on {datetime.now().strftime('%d %B %Y, %H:%M')}",
-        )
-        ts_cell.font = Font(name="Calibri", size=9, italic=True, color="666666")
-        ts_cell.alignment = CENTER_ALIGN
-
-        # Start the grid at row 4
-        start_row = 4
-
-        # Write a grid for each batch
-        current_row = start_row
-        for batch_label in sorted(self.by_batch.keys()):
-            batch_rows = self.by_batch[batch_label]
-            current_row = self._write_grid(
-                ws, current_row, batch_label, batch_rows,
-            )
-            current_row += 2  # gap between batches
-
-        # Set column widths
-        ws.column_dimensions["A"].width = 18
-        for col_idx in range(2, 7):
-            ws.column_dimensions[get_column_letter(col_idx)].width = 28
-
-    # =================================================================
-    #  PER-BATCH SHEETS
-    # =================================================================
-
-    def _write_batch_sheet(self, wb: Workbook, batch_label: str):
-        """Write a timetable sheet for a single batch."""
-        # Sanitise the sheet name (Excel has a 31-char limit)
-        safe_name = batch_label[:31].replace("/", "-")
-        ws = wb.create_sheet(safe_name)
-
-        batch_rows = self.by_batch[batch_label]
-
-        # Title
-        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
-        title_cell = ws.cell(row=1, column=1, value=f"Timetable – {batch_label}")
-        title_cell.font = TITLE_FONT
-        title_cell.alignment = CENTER_ALIGN
-
-        # Write the grid starting at row 3
-        self._write_grid(ws, 3, batch_label, batch_rows)
-
-        # Set column widths
-        ws.column_dimensions["A"].width = 18
-        for col_idx in range(2, 7):
-            ws.column_dimensions[get_column_letter(col_idx)].width = 28
-
-    # =================================================================
-    #  FACULTY WORKLOAD SHEET
-    # =================================================================
-
-    def _write_faculty_sheet(self, wb: Workbook):
-        """Write a summary sheet showing faculty weekly workload."""
-        ws = wb.create_sheet("Faculty Workload")
-
-        # Title
-        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=5)
-        title_cell = ws.cell(row=1, column=1, value="Faculty Weekly Workload Summary")
-        title_cell.font = TITLE_FONT
-        title_cell.alignment = CENTER_ALIGN
-
-        # Headers
-        headers = ["Faculty Code", "Courses Taught", "Batches", "Total Sessions", "Load"]
-        for col, header in enumerate(headers, start=1):
-            cell = ws.cell(row=3, column=col, value=header)
-            cell.font = HEADER_FONT
-            cell.fill = HEADER_FILL
-            cell.alignment = CENTER_ALIGN
-            cell.border = BORDER
-
-        # Aggregate faculty data
-        faculty_data = defaultdict(lambda: {
-            "courses": set(),
-            "batches": set(),
-            "sessions": 0,
-        })
-
-        for row in self.rows:
-            fc = row.get("faculty_code")
-            if not fc:
-                continue
-            faculty_data[fc]["courses"].add(row["course_code"])
-            faculty_data[fc]["batches"].add(row["batch_label"])
-            faculty_data[fc]["sessions"] += 1
-
-        # Write rows
-        current_row = 4
-        for fc in sorted(faculty_data.keys()):
-            info = faculty_data[fc]
-
-            ws.cell(row=current_row, column=1, value=fc).font = CELL_FONT
-            ws.cell(row=current_row, column=2,
-                    value=", ".join(sorted(info["courses"]))).font = CELL_FONT
-            ws.cell(row=current_row, column=3,
-                    value=", ".join(sorted(info["batches"]))).font = CELL_FONT
-            ws.cell(row=current_row, column=4,
-                    value=info["sessions"]).font = CELL_FONT
-
-            # Load indicator
-            if info["sessions"] > 10:
-                load_text = "Heavy"
-            elif info["sessions"] > 6:
-                load_text = "Medium"
-            else:
-                load_text = "Light"
-
-            ws.cell(row=current_row, column=5, value=load_text).font = CELL_FONT
-
-            # Apply borders
-            for col in range(1, 6):
-                ws.cell(row=current_row, column=col).border = BORDER
-                ws.cell(row=current_row, column=col).alignment = CENTER_ALIGN
-
-            current_row += 1
-
-        # Set column widths
-        ws.column_dimensions["A"].width = 15
-        ws.column_dimensions["B"].width = 30
-        ws.column_dimensions["C"].width = 35
-        ws.column_dimensions["D"].width = 16
-        ws.column_dimensions["E"].width = 12
-
-    # =================================================================
-    #  GRID WRITER – shared logic for the slot/day grid
-    # =================================================================
-
-    def _write_grid(self, ws, start_row: int, batch_label: str,
-                    batch_rows: list[dict]) -> int:
+    def _write_overall_sheet(self, ws, rows: list[dict], subtitle: str | None = None):
         """
-        Write a time-slot grid for a batch.
+        Writes the university-format timetable into the given worksheet.
 
         Layout:
-            Row 0: Batch label header
-            Row 1: Day headers (Mon–Fri)
-            Rows 2+: One row per time slot
-
-        Args:
-            ws: Worksheet to write to.
-            start_row: Row number to start writing at.
-            batch_label: Label for the header.
-            batch_rows: Timetable rows for this batch.
-
-        Returns:
-            The next available row after the grid.
+            Row 1:  merged title
+            Row 2:  merged subtitle
+            Row 3:  (blank)
+            Row 4:  header row — Time | Batch | (sep) | Monday(merged 6) | … | Friday(merged 6)
+            Row 5:  (sub-header, blank in data — used for column C separator marker)
+            For each time-range:
+                Slot row:  time in A, slot names merged across each day block
+                Data rows: one per batch, columns filled per-day
         """
-        # Build a lookup: (day_of_week, start_time) -> row data
-        cell_lookup = {}
-        for row in batch_rows:
-            key = (row["day_of_week"], str(row["start_time"]))
-            cell_lookup[key] = row
+        last_col = 37  # AK
 
-        # Batch label header
-        ws.merge_cells(
-            start_row=start_row, start_column=1,
-            end_row=start_row, end_column=6,
+        # ---- Row 1: University title ----
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_col)
+        ws["A1"] = "Dhirubhai Ambani University (School of Technology)"
+        ws["A1"].font = TITLE_FONT
+        ws["A1"].alignment = CENTER
+
+        # ---- Row 2: Subtitle ----
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_col)
+        ws["A2"] = subtitle or "Lecture Time-Table"
+        ws["A2"].font = SUBTITLE_FONT
+        ws["A2"].alignment = CENTER
+
+        # ---- Row 3: blank spacer ----
+        ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=last_col)
+
+        # ---- Row 4: Day headers ----
+        hdr_row = 4
+        for label, col in [("Time", 1), ("Batch", 2)]:
+            cell = ws.cell(hdr_row, col, label)
+            self._style_header(cell)
+
+        for day, start_col in DAY_COL_START.items():
+            end_col = start_col + DAY_SPAN - 1
+            ws.merge_cells(
+                start_row=hdr_row, start_column=start_col,
+                end_row=hdr_row, end_column=end_col,
+            )
+            cell = ws.cell(hdr_row, start_col, day)
+            self._style_header(cell)
+
+        # ---- Build the batch/time grouping ----
+        # Group rows by time-range, then by batch within each time-range
+        time_batch_map: dict[str, dict[str, list[dict]]] = {}
+        for tr in self.time_ranges:
+            time_batch_map[tr] = defaultdict(list)
+
+        missing_time_ranges = 0
+        for row in rows:
+            tr = self._time_range_label(row["start_time"], row["end_time"])
+            if tr and tr in time_batch_map:
+                time_batch_map[tr][row["batch_label"]].append(row)
+            elif tr:
+                missing_time_ranges += 1
+
+        self._debug_log(
+            hypothesis_id="H3",
+            location="export_service.py:_write_overall_sheet",
+            message="Built time-batch map",
+            data={
+                "sheet_title": ws.title,
+                "input_rows": len(rows),
+                "available_time_ranges": len(self.time_ranges),
+                "missing_time_ranges": missing_time_ranges,
+            },
         )
-        header_cell = ws.cell(row=start_row, column=1, value=batch_label)
-        header_cell.font = SUBHEADER_FONT
-        header_cell.fill = SUBHEADER_FILL
-        header_cell.alignment = CENTER_ALIGN
-        header_cell.border = BORDER
 
-        # Day headers row
-        day_row = start_row + 1
-        time_header = ws.cell(row=day_row, column=1, value="Time Slot")
-        time_header.font = HEADER_FONT
-        time_header.fill = HEADER_FILL
-        time_header.alignment = CENTER_ALIGN
-        time_header.border = BORDER
+        # ---- Write data rows ----
+        current_row = 6  # leave row 5 blank (matches reference)
 
-        for col_idx, day in enumerate(WEEKDAYS, start=2):
-            cell = ws.cell(row=day_row, column=col_idx, value=day)
-            cell.font = HEADER_FONT
-            cell.fill = HEADER_FILL
-            cell.alignment = CENTER_ALIGN
-            cell.border = BORDER
+        for time_range in self.time_ranges:
+            batch_groups = time_batch_map.get(time_range, {})
+            batches_sorted = sorted(batch_groups.keys())
 
-        # Data rows – one per time slot
-        current_row = day_row + 1
-        for slot_time in self.time_slots:
-            # Time label in column A
-            time_cell = ws.cell(row=current_row, column=1, value=slot_time)
-            time_cell.font = Font(name="Calibri", size=10, bold=True)
-            time_cell.alignment = CENTER_ALIGN
-            time_cell.border = BORDER
+            if not batches_sorted:
+                # Still write the slot row with no batches
+                batches_sorted = []
 
-            # Day columns
-            for col_idx, day in enumerate(WEEKDAYS, start=2):
-                key = (day, slot_time)
-                cell = ws.cell(row=current_row, column=col_idx)
-                cell.border = BORDER
-                cell.alignment = CENTER_ALIGN
+            # --- Slot header row ---
+            slot_row = current_row
 
-                if key in cell_lookup:
-                    entry = cell_lookup[key]
-                    cell_text = self._format_cell(entry)
-                    cell.value = cell_text
-                    cell.font = CELL_FONT
-                else:
-                    cell.value = ""
-                    cell.fill = FREE_FILL
+            # Time cell (will be merged down later)
+            time_cell = ws.cell(slot_row, 1, time_range)
+            time_cell.font = TIME_FONT
+            time_cell.alignment = CENTER
+            time_cell.fill = SLOT_ROW_FILL
+            time_cell.border = THIN_BORDER
 
-            current_row += 1
+            # Slot names per day (merged across day columns)
+            for day, start_col in DAY_COL_START.items():
+                end_col = start_col + DAY_SPAN - 1
+                ws.merge_cells(
+                    start_row=slot_row, start_column=start_col,
+                    end_row=slot_row, end_column=end_col,
+                )
+                slot_name = self.slot_grid.get(time_range, {}).get(day, "")
+                cell = ws.cell(slot_row, start_col, slot_name)
+                cell.font = SLOT_ROW_FONT
+                cell.alignment = CENTER
+                cell.fill = SLOT_ROW_FILL
+                cell.border = THIN_BORDER
 
-        return current_row
+            current_row += 1  # move past slot header
 
-    # =================================================================
-    #  HELPERS
-    # =================================================================
+            if not batches_sorted:
+                current_row += 1
+                continue
 
-    def _extract_time_slots(self) -> list[str]:
-        """
-        Extract all unique time slot labels from the timetable data,
-        sorted chronologically.
+            # --- Data rows (one row per batch) ---
+            # For batches that have entries across multiple days,
+            # some may have more than one entry per day (e.g. electives).
+            # In the reference, extra rows simply continue below the batch row
+            # without repeating the batch label.
 
-        Returns a list like: ["08:00", "09:00", "10:00", ...]
-        """
-        times = set()
-        for row in self.rows:
-            start = str(row["start_time"])
-            # Normalise to HH:MM format
-            if len(start) > 5:
-                start = start[:5]
-            times.add(start)
+            for b_idx, batch_label in enumerate(batches_sorted):
+                day_entries = batch_groups[batch_label]
 
-        return sorted(times)
+                # Group by day, preserving order
+                by_day: dict[str, list[dict]] = defaultdict(list)
+                for entry in day_entries:
+                    by_day[entry["day_of_week"]].append(entry)
 
-    def _format_cell(self, entry: dict) -> str:
-        """
-        Format a timetable entry as a cell string.
+                unmapped_days = sorted([d for d in by_day.keys() if d not in WEEKDAYS])
+                if unmapped_days:
+                    self._debug_log(
+                        hypothesis_id="H2",
+                        location="export_service.py:_write_overall_sheet",
+                        message="Found entries with unmapped day values",
+                        data={
+                            "sheet_title": ws.title,
+                            "time_range": time_range,
+                            "batch_label": batch_label,
+                            "unmapped_days": unmapped_days[:10],
+                        },
+                    )
 
-        Format:
-            Course Code
-            Faculty Code
-            Room Name
+                # Max rows needed for this batch
+                max_sub_rows = max((len(v) for v in by_day.values()), default=1) if by_day else 1
 
-        Example:
-            IT205
-            PD
-            LT-1
-        """
-        parts = [
-            entry.get("course_code", ""),
-            entry.get("faculty_code", ""),
-            entry.get("classroom_name", ""),
-        ]
-        return "\n".join(parts)
+                for sub_row_idx in range(max_sub_rows):
+                    row_num = current_row + sub_row_idx
+                    row_fill = BATCH_FILL_LIGHT if b_idx % 2 == 0 else BATCH_FILL_ALT
+
+                    # Batch label (only on the first sub-row)
+                    if sub_row_idx == 0:
+                        bcell = ws.cell(row_num, 2, batch_label)
+                        bcell.font = BATCH_FONT
+                        bcell.alignment = LEFT
+                        bcell.fill = row_fill
+                        bcell.border = THIN_BORDER
+
+                        # Merge batch cell down if multiple sub-rows
+                        if max_sub_rows > 1:
+                            ws.merge_cells(
+                                start_row=row_num, start_column=2,
+                                end_row=row_num + max_sub_rows - 1, end_column=2,
+                            )
+
+                    # Separator column C
+                    sep = ws.cell(row_num, 3, "")
+                    sep.fill = SEPARATOR_FILL
+
+                    # Day blocks
+                    for day, start_col in DAY_COL_START.items():
+                        entries_for_day = by_day.get(day, [])
+                        entry = entries_for_day[sub_row_idx] if sub_row_idx < len(entries_for_day) else None
+
+                        for offset, key in enumerate(DETAIL_KEYS):
+                            col = start_col + offset
+                            value = (entry or {}).get(key, "")
+                            cell = ws.cell(row_num, col, value)
+                            cell.font = CELL_FONT
+                            cell.alignment = LEFT if offset == 1 else CENTER
+                            cell.fill = row_fill
+                            cell.border = THIN_BORDER
+
+                current_row += max_sub_rows
+
+            # Merge the time cell down to cover all batch rows
+            time_end_row = current_row - 1
+            if time_end_row > slot_row:
+                ws.merge_cells(
+                    start_row=slot_row, start_column=1,
+                    end_row=time_end_row, end_column=1,
+                )
+
+            current_row += 1  # blank separator row between time blocks
+
+        # ---- Column widths (match reference) ----
+        self._set_column_widths(ws)
+
+    # ------------------------------------------------------------------
+    #  Styling helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _style_header(cell):
+        cell.font = HEADER_FONT
+        cell.fill = HEADER_FILL
+        cell.alignment = CENTER
+        cell.border = THIN_BORDER
+
+    @staticmethod
+    def _set_column_widths(ws):
+        widths = {
+            "A": 16, "B": 28, "C": 3,
+            # Monday D-I
+            "D": 12, "E": 40, "F": 14, "G": 22, "H": 10, "I": 14,
+            # separator
+            "J": 3,
+            # Tuesday K-P
+            "K": 12, "L": 40, "M": 14, "N": 22, "O": 10, "P": 14,
+            # separator
+            "Q": 3,
+            # Wednesday R-W
+            "R": 12, "S": 40, "T": 14, "U": 22, "V": 10, "W": 14,
+            # separator
+            "X": 3,
+            # Thursday Y-AD
+            "Y": 12, "Z": 40, "AA": 14, "AB": 22, "AC": 10, "AD": 14,
+            # separator
+            "AE": 3,
+            # Friday AF-AK
+            "AF": 12, "AG": 40, "AH": 14, "AI": 22, "AJ": 10, "AK": 14,
+        }
+        for col_letter, w in widths.items():
+            ws.column_dimensions[col_letter].width = w
+
+    # ------------------------------------------------------------------
+    #  Data helpers
+    # ------------------------------------------------------------------
+
+    def _extract_time_ranges(self) -> list[str]:
+        """Return unique time-range labels sorted chronologically."""
+        ranges: dict[str, tuple[str, str]] = {}
+        source = self.slots if self.slots else self.rows
+        for item in source:
+            label = self._time_range_label(item.get("start_time"), item.get("end_time"))
+            if label:
+                ranges[label] = (
+                    self._normalize_time(item.get("start_time")),
+                    self._normalize_time(item.get("end_time")),
+                )
+        result = [lbl for lbl, _ in sorted(ranges.items(), key=lambda x: x[1])]
+        self._debug_log(
+            hypothesis_id="H4",
+            location="export_service.py:_extract_time_ranges",
+            message="Extracted time ranges",
+            data={
+                "source": "slots" if self.slots else "rows",
+                "time_ranges_count": len(result),
+                "first_time_ranges": result[:5],
+            },
+        )
+        return result
+
+    def _build_slot_grid(self) -> dict[str, dict[str, str]]:
+        """Map (time_range, day) -> slot_name."""
+        grid: dict[str, dict[str, str]] = defaultdict(dict)
+        for slot in self.slots:
+            tr = self._time_range_label(slot.get("start_time"), slot.get("end_time"))
+            day = slot.get("day_of_week")
+            if tr and day in WEEKDAYS:
+                grid[tr][day] = slot.get("slot_name", "")
+        self._debug_log(
+            hypothesis_id="H5",
+            location="export_service.py:_build_slot_grid",
+            message="Built slot grid",
+            data={
+                "slot_grid_time_ranges": len(grid.keys()),
+                "sample_keys": list(grid.keys())[:5],
+            },
+        )
+        return grid
+
+    @staticmethod
+    def _time_range_label(start_time, end_time) -> str:
+        start = ExportService._normalize_time(start_time)
+        end = ExportService._normalize_time(end_time)
+        if not start or not end:
+            return ""
+        return f"{start} - {end}"
+
+    @staticmethod
+    def _normalize_time(value) -> str:
+        parts = str(value or "").split(":")
+        if len(parts) < 2:
+            return ""
+        return parts[0].zfill(2) + ":" + parts[1].zfill(2)
+
+    # ------------------------------------------------------------------
+    #  File I/O helpers
+    # ------------------------------------------------------------------
+
+    def _save(self, wb: Workbook, prefix: str) -> str:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{prefix}_{timestamp}.xlsx"
+        filepath = os.path.join(OUTPUT_DIR, filename)
+        wb.save(filepath)
+        logger.info("Timetable exported to: %s", filepath)
+        return filepath
+
+    @staticmethod
+    def _safe_sheet_name(raw: str, wb: Workbook) -> str:
+        invalid = '[]:*?/\\'
+        clean = "".join("-" if ch in invalid else ch for ch in str(raw))
+        clean = clean.strip() or "Sheet"
+        base = clean[:31]
+        name = base
+        idx = 2
+        while name in wb.sheetnames:
+            suffix = f" ({idx})"
+            name = base[: 31 - len(suffix)] + suffix
+            idx += 1
+        return name
+
+    def _debug_log(self, hypothesis_id: str, location: str, message: str, data: dict):
+        # region agent log
+        try:
+            payload = {
+                "sessionId": "ecec21",
+                "runId": self._run_id,
+                "hypothesisId": hypothesis_id,
+                "location": location,
+                "message": message,
+                "data": data,
+                "timestamp": int(datetime.now().timestamp() * 1000),
+            }
+            with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+        except Exception:
+            pass
+        # endregion

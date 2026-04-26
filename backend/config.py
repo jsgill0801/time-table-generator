@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 # Resolve the .env path relative to THIS file's parent (project root)
 _env_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(_env_path, override=True)
+load_dotenv(_env_path, override=False)
 
 
 class Config:
@@ -28,6 +28,10 @@ class Config:
 
     # Flask-Session settings
     SESSION_TYPE = "filesystem"
+
+    DEFAULT_ADMIN_USERNAME = os.getenv("DEFAULT_ADMIN_USERNAME", "admin")
+    DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@ttg.local")
+    DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin123")
 
 
 class DevelopmentConfig(Config):

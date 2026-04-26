@@ -13,7 +13,7 @@ Endpoints:
 
 from collections import defaultdict
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify
 
 from backend.db import get_db
 from backend.models.timetable import Timetable
@@ -50,9 +50,14 @@ def get_full_timetable():
             DAY_ORDER.get(e["day_of_week"], 99),
             e["start_time"],
         ))
+        generated_at = max(
+            (entry.get("generated_at") for entry in entries if entry.get("generated_at")),
+            default=None,
+        )
 
         return jsonify({
             "message": f"{len(entries)} scheduled session(s).",
+            "generated_at": generated_at,
             "timetable": entries,
         }), 200
 
@@ -191,6 +196,10 @@ def get_timetable_summary():
             "unique_batches": len(batches),
             "unique_faculties": len(faculties),
             "unique_rooms": len(rooms),
+            "generated_at": max(
+                (r.generated_at.isoformat() for r in rows if r.generated_at),
+                default=None,
+            ),
             "days_used": sorted(days_used, key=lambda d: DAY_ORDER.get(d, 99)),
             "batches": sorted(batches),
             "faculty_load": dict(sorted(faculty_load.items())),

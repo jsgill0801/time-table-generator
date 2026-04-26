@@ -1,180 +1,156 @@
-# Time Table Generator
+# University Timetable Generator
 
-An automated scheduling system for academic institutions that produces conflict-free weekly timetables satisfying hard constraints and optimising soft constraints.
+A full-stack web application for automated university timetable generation, built with **Flask** (Python) and vanilla **HTML/CSS/JS**.
 
----
+## Features
 
-## Project Overview
-
-The Time Table Generator (TTG) accepts structured input — Courses, Faculties, Classrooms, Slots, Batches, and Categories — and automatically assigns each course to a (day, time-slot, room) triple. The system enforces all hard constraints (no faculty/room/batch double-booking, capacity limits, teaching load) and applies a hill-climbing optimiser to improve schedule quality against soft constraints.
-
-The system includes user authentication (signup, login, logout) to restrict access to authorized administrators.
-
-### Output Views
-
-| View | Description |
-|------|-------------|
-| Weekly Timetable | Full grid of all time blocks × days showing every scheduled session |
-| Batch-wise Timetable | One sheet per batch/section |
-| Faculty-wise Schedule | One sheet per faculty member (idle gaps highlighted) |
-| Room-wise Allocation | One sheet per classroom |
-| Conflict Report | Persisted record of unresolved clashes with reasons |
-
-The Excel output replicates the university's standard timetable format: a slot-based rotating grid with 6 fields per day (course code, course name, L-T-P-C, category, faculty code, room).
-
----
+- **Dashboard** — Overview of all configured resources with one-click timetable generation
+- **Resource Management** — CRUD interfaces for Courses, Faculty, Rooms, Batches, Categories, and Time Slots
+- **CSV Import** — Bulk data upload via CSV files for every resource type
+- **Timetable Generation** — Server-side constraint-based scheduling engine with conflict detection
+- **Excel Export** — Download generated timetables as multi-sheet `.xlsx` workbooks (overall, faculty-wise, room-wise, batch-wise)
+- **Authentication** — Session-based login/signup system
+- **Conflict Reporting** — Automatic detection and display of scheduling conflicts
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.11+ / Flask |
-| Authentication | Flask-Session + Werkzeug |
-| ORM | SQLAlchemy |
-| Database | PostgreSQL 15+ |
-| Frontend | HTML / CSS / JavaScript |
-| Excel Output | openpyxl |
-| Testing | pytest |
+| Layer      | Technology                         |
+|------------|-------------------------------------|
+| Backend    | Python 3.10+, Flask, SQLAlchemy     |
+| Frontend   | HTML5, CSS3 (Inter + Georgia fonts), Vanilla JS |
+| Database   | PostgreSQL (primary) / SQLite (fallback) |
+| Export     | openpyxl (Excel generation)         |
 
----
+## Quick Start
+
+### Prerequisites
+
+- Python 3.10 or higher
+- PostgreSQL (optional — SQLite works out of the box)
+
+### Setup
+
+```bash
+# 1. Navigate to the project directory
+cd time-table-generator
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure environment (optional — defaults work with SQLite)
+#    Edit .env to set DATABASE_URL for PostgreSQL:
+#    DATABASE_URL=postgresql://user:password@localhost:5432/TTG-main
+
+# 4. Run the application
+python -m backend.app
+```
+
+The application starts at **http://localhost:5000**
+
+### First-Time Setup
+
+1. Open http://localhost:5000 → you'll see the **Login** page
+2. Click **"Create one"** to register an admin account
+3. Log in with your credentials
+4. Use the sidebar to navigate between pages
+5. Import data via CSV or add entries manually using the **Add** button
+6. Click **Run** on the Dashboard to generate the timetable
+7. Go to **Timetable** page to download the Excel export
 
 ## Project Structure
 
 ```
 time-table-generator/
 ├── backend/
-│   ├── app.py                     # Flask app factory
-│   ├── config.py                  # Configuration
-│   ├── db.py                      # Database engine & session
-│   ├── models/
-│   │   ├── user.py                # User authentication model
-│   │   ├── course.py
-│   │   ├── batch.py
-│   │   ├── faculty.py             # Includes faculty_email
-│   │   ├── classroom.py
-│   │   ├── slot.py
-│   │   ├── batch_course.py
-│   │   ├── faculty_course.py
-│   │   ├── timetable.py           # Full denormalized fields
-│   │   └── conflict_report.py     # Persisted conflict records
-│   ├── routes/
-│   │   ├── auth_routes.py         # Signup, login, logout
-│   │   ├── course_routes.py
-│   │   ├── batch_routes.py
-│   │   ├── faculty_routes.py
-│   │   ├── classroom_routes.py
-│   │   ├── slot_routes.py
-│   │   └── generate_routes.py
-│   ├── services/
-│   │   ├── auth_service.py        # Password hashing, session management
-│   │   ├── data_service.py        # Data fetching & preprocessing
-│   │   ├── validation_service.py  # Pre-generation integrity checks
-│   │   ├── scheduler.py           # Hard-constraint CSP engine
-│   │   ├── optimiser.py           # Soft-constraint optimizer
-│   │   ├── excel_writer.py        # University-format Excel generation
-│   │   └── conflict_reporter.py   # Conflict report generation
-│   ├── parsers/                   # CSV import parsers
-│   └── utils/                     # Custom exceptions & helpers
+│   ├── app.py                  # Flask application factory
+│   ├── config.py               # Environment configuration
+│   ├── db.py                   # SQLAlchemy engine & session
+│   ├── models/                 # Database models (ORM)
+│   ├── routes/                 # API endpoints + frontend serving
+│   │   ├── frontend_routes.py  # Serves HTML pages
+│   │   ├── import_routes.py    # CSV import endpoints
+│   │   ├── generate_routes.py  # Timetable generation
+│   │   ├── export_routes.py    # Excel download
+│   │   └── ...                 # CRUD routes for each entity
+│   ├── services/               # Business logic layer
+│   │   ├── scheduler.py        # Hard-constraint scheduler
+│   │   ├── optimiser.py        # Soft-constraint optimizer
+│   │   ├── export_service.py   # Excel workbook generation
+│   │   └── ...
+│   ├── parsers/                # CSV parsing & validation
+│   └── utils/                  # Helpers, middleware, logging
 ├── frontend/
-│   ├── index.html
-│   ├── login.html
-│   ├── signup.html
-│   ├── css/styles.css
-│   └── js/
-│       ├── app.js
-│       ├── api.js
-│       ├── auth.js
-│       ├── forms/
-│       └── viewers/
-├── tests/
-├── docs/
-├── sample_data/
-├── output/                        # Generated files (gitignored)
-├── requirements.txt
-├── .env.example
-└── .gitignore
+│   ├── templates/              # HTML pages
+│   │   ├── login.html
+│   │   ├── dashboard.html
+│   │   ├── courses.html
+│   │   └── ...
+│   └── static/                 # CSS & JavaScript
+│       ├── style.css           # Full application stylesheet
+│       ├── api.js              # Centralised API client
+│       └── script.js           # Application logic & UI rendering
+├── .env                        # Environment variables
+├── requirements.txt            # Python dependencies
+└── README.md
 ```
 
----
+## API Endpoints
 
-## Database Schema
+All API endpoints are prefixed with `/api/v1/`.
 
-| Table | Primary Key | Description |
-|-------|------------|-------------|
-| `app_user` | `user_id` (SERIAL) | User authentication (username, email, password hash, role) |
-| `course` | `course_id` (SERIAL) | Courses with L-T-P-C credit notation |
-| `batch` | `batch_id` (SERIAL) | Program / Branch / Semester / Section |
-| `faculty` | `faculty_code` (VARCHAR) | Faculty with email and max teaching load |
-| `classroom` | `classroom_name` (VARCHAR) | Rooms with seating capacity |
-| `slot` | `slot_id` (VARCHAR) | Day + time range + slot name |
-| `category` | `category_id` (SERIAL) | Course categories (Core, Elective, etc.) |
-| `batch_course` | `auto_id` (SERIAL) | Batch-Course mapping with enrollment count |
-| `faculty_course` | `auto_id` (SERIAL) | Faculty-Course mapping |
-| `timetable` | `auto_id` (SERIAL) | Generated schedule with all denormalized output fields |
-| `conflict_report` | `conflict_id` (SERIAL) | Persisted unresolved scheduling conflicts |
+| Method | Endpoint                | Description                     |
+|--------|-------------------------|---------------------------------|
+| POST   | `/auth/signup`          | Register a new user             |
+| POST   | `/auth/login`           | Log in and start session        |
+| POST   | `/auth/logout`          | End current session             |
+| GET    | `/courses/`             | List all courses                |
+| POST   | `/courses/`             | Create a course                 |
+| GET    | `/batches/`             | List all batches                |
+| GET    | `/faculties/`           | List all faculty                |
+| GET    | `/classrooms/`          | List all classrooms             |
+| GET    | `/slots/`               | List all time slots             |
+| GET    | `/categories/`          | List all categories             |
+| POST   | `/import/courses`       | Import courses from CSV         |
+| POST   | `/import/batches`       | Import batches from CSV         |
+| POST   | `/import/faculties`     | Import faculty from CSV         |
+| POST   | `/import/classrooms`    | Import classrooms from CSV      |
+| POST   | `/import/slots`         | Import slots from CSV           |
+| POST   | `/import/categories`    | Import categories from CSV      |
+| POST   | `/generate/`            | Trigger timetable generation    |
+| GET    | `/export/download`      | Download timetable as Excel     |
+| GET    | `/export/preview`       | Preview timetable grid as JSON  |
+| GET    | `/data/counts`          | Record counts per table         |
 
----
+## CSV Import Formats
 
-## Constraints
+Each resource page shows the required CSV column headers. Examples:
 
-### Hard Constraints
-- No faculty double-booking in the same time slot
-- Faculty scheduled within max weekly teaching load
-- No batch double-booking in the same time slot
-- Each batch receives exactly the required lectures per course per week
-- No room double-booking in the same time slot
-- Room capacity >= students enrolled
-- Classes only within working days and designated hours
-- No two consecutive lectures for a faculty member
-
-### Soft Constraints (Optimisation)
-- Same-category courses in the same slots
-- Minimise faculty idle gaps (without consecutive lectures)
-- Avoid first/last slots of the day
-- Distribute course sessions evenly across the week
-- Prefer consistent time slots for courses
-- Minimise room changes per batch per day
-
----
-
-## Getting Started
-
-### Prerequisites
-- Python 3.11+
-- PostgreSQL 15+
-- pip
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/<your-org>/time-table-generator.git
-cd time-table-generator
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate        # Linux/Mac
-venv\Scripts\activate           # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your PostgreSQL credentials and SECRET_KEY
-
-# Run the application
-python -m backend.app
+**Courses:**
+```csv
+course_code,course_name,lectures,tutorials,labs,credits
+ICT201,Data Structures,3,1,0,4
 ```
 
-### Running Tests
-
-```bash
-pytest tests/ -v
+**Faculty:**
+```csv
+faculty_code,faculty_name,faculty_email,max_load
+PD,Dr. Priya Desai,pd@college.edu,18
 ```
 
----
+**Batches:**
+```csv
+program,branch,semester,section
+BTech,Computer Science,4,A
+```
+
+## Environment Variables
+
+| Variable       | Default                                | Description            |
+|----------------|----------------------------------------|------------------------|
+| `DATABASE_URL` | `sqlite:///timetable.db`               | Database connection    |
+| `SECRET_KEY`   | *(auto-generated)*                     | Flask session signing  |
+| `FLASK_ENV`    | `development`                          | Flask environment mode |
 
 ## License
 
-This project is developed as part of an academic course project.
+This project is developed for academic purposes as part of the university curriculum.

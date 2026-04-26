@@ -21,6 +21,9 @@ Hard constraints enforced:
 """
 
 from collections import defaultdict
+import json
+import os
+from datetime import datetime
 
 from backend.utils.helpers import DAY_ORDER
 
@@ -82,6 +85,11 @@ class Scheduler:
         # Results
         self.assignments = []
         self.conflicts = []
+        self._debug_log_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "debug-ecec21.log",
+        )
+        self._run_id = f"scheduler_{int(datetime.now().timestamp() * 1000)}"
 
     def run(self) -> dict:
         """
@@ -94,6 +102,7 @@ class Scheduler:
         """
         for entry in self.demand:
             lectures_needed = entry["lectures_required"]
+            placed_for_entry = 0
 
             for lecture_num in range(lectures_needed):
                 placed = self._try_place_lecture(entry, lecture_num + 1)
@@ -107,6 +116,30 @@ class Scheduler:
                         "lecture_number": lecture_num + 1,
                         "reason": self._diagnose_failure(entry),
                     })
+                else:
+                    placed_for_entry += 1
+
+            # region agent log
+            try:
+                payload = {
+                    "sessionId": "ecec21",
+                    "runId": self._run_id,
+                    "hypothesisId": "H8",
+                    "location": "scheduler.py:run",
+                    "message": "Course demand placement summary",
+                    "data": {
+                        "course_code": entry["course_code"],
+                        "batch_label": entry["batch_label"],
+                        "required": lectures_needed,
+                        "placed": placed_for_entry,
+                    },
+                    "timestamp": int(datetime.now().timestamp() * 1000),
+                }
+                with open(self._debug_log_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+            except Exception:
+                pass
+            # endregion
 
         return {
             "assignments": self.assignments,

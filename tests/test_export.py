@@ -2,14 +2,25 @@
 Tests for the ExportService.
 
 Verifies that the Excel workbook is generated correctly
-with proper structure: master sheet, per-batch sheets,
-and faculty workload summary.
+with proper structure for the four supported exports:
+overall (single sheet), faculty-wise, batch-wise, and room-wise.
 """
 
 import os
+import uuid
 import pytest
 
 from backend.services.export_service import ExportService
+
+
+@pytest.fixture
+def export_tmp_dir():
+    """Use a plain temp directory because pytest's tmp_path ACL is restricted here."""
+    root = os.path.abspath(".test-output")
+    os.makedirs(root, exist_ok=True)
+    path = os.path.join(root, f"ttg-export-{uuid.uuid4().hex}")
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
 # -----------------------------------------------------------------
@@ -33,7 +44,7 @@ def _sample_timetable():
             "course_name": "Data Structures",
             "ltpc": "3-0-0-3",
             "category_name": "Core",
-            "batch_label": "BTech Sem-4 (ICT) Sec-A",
+            "batch_label": "BTech Sem-IV (ICT) Sec-A",
         },
         {
             "auto_id": 2,
@@ -49,7 +60,7 @@ def _sample_timetable():
             "course_name": "Probability",
             "ltpc": "3-1-0-4",
             "category_name": "Core",
-            "batch_label": "BTech Sem-4 (ICT) Sec-A",
+            "batch_label": "BTech Sem-IV (ICT) Sec-A",
         },
         {
             "auto_id": 3,
@@ -65,7 +76,7 @@ def _sample_timetable():
             "course_name": "English Communication",
             "ltpc": "2-0-0-2",
             "category_name": "Humanities",
-            "batch_label": "BTech Sem-4 (CS)",
+            "batch_label": "BTech Sem-IV (CS)",
         },
     ]
 
@@ -77,103 +88,79 @@ def _sample_timetable():
 class TestExportService:
     """Tests for the Excel export service."""
 
-    def test_generates_xlsx_file(self, tmp_path, monkeypatch):
-        """The service should create an .xlsx file on disk."""
+    def test_generates_xlsx_file(self, export_tmp_dir, monkeypatch):
+        """The overall export should create an .xlsx file on disk."""
         # Override the output directory to use a temp path
         monkeypatch.setattr(
             "backend.services.export_service.OUTPUT_DIR",
-            str(tmp_path),
+            str(export_tmp_dir),
         )
 
         service = ExportService(_sample_timetable())
-        filepath = service.generate()
+        filepath = service.generate_overall()
 
         assert os.path.exists(filepath)
         assert filepath.endswith(".xlsx")
         assert os.path.getsize(filepath) > 0
 
-    def test_workbook_has_correct_sheets(self, tmp_path, monkeypatch):
-        """The workbook should have master + per-batch + faculty sheets."""
+    def test_workbook_has_correct_sheets(self, export_tmp_dir, monkeypatch):
+        """The overall workbook should have a single sheet."""
         monkeypatch.setattr(
             "backend.services.export_service.OUTPUT_DIR",
-            str(tmp_path),
+            str(export_tmp_dir),
         )
 
         service = ExportService(_sample_timetable())
-        filepath = service.generate()
+        filepath = service.generate_overall()
 
         from openpyxl import load_workbook
         wb = load_workbook(filepath)
 
         sheet_names = wb.sheetnames
 
-        # Should have: Master Timetable, 2 batch sheets, Faculty Workload
-        assert "Master Timetable" in sheet_names
-        assert "Faculty Workload" in sheet_names
-        assert len(sheet_names) == 4  # master + 2 batches + faculty
+        assert "Time-Table" in sheet_names
+        assert len(sheet_names) == 1
 
-    def test_master_sheet_has_title(self, tmp_path, monkeypatch):
-        """The master sheet should contain a title."""
+    def test_master_sheet_has_title(self, export_tmp_dir, monkeypatch):
+        """The main sheet should contain the grouped timetable title."""
         monkeypatch.setattr(
             "backend.services.export_service.OUTPUT_DIR",
-            str(tmp_path),
+            str(export_tmp_dir),
         )
 
         service = ExportService(_sample_timetable())
-        filepath = service.generate()
+        filepath = service.generate_overall()
 
         from openpyxl import load_workbook
         wb = load_workbook(filepath)
-        ws = wb["Master Timetable"]
+        ws = wb["Time-Table"]
 
-        assert ws.cell(row=1, column=1).value == "Lecture Time Table"
+        assert ws.cell(row=2, column=1).value == "Lecture Time-Table"
 
-    def test_faculty_sheet_has_data(self, tmp_path, monkeypatch):
-        """The faculty sheet should list faculty and their load."""
+    def test_faculty_sheet_has_data(self, export_tmp_dir, monkeypatch):
+        """Faculty-wise export should create one sheet per faculty."""
         monkeypatch.setattr(
             "backend.services.export_service.OUTPUT_DIR",
-            str(tmp_path),
+            str(export_tmp_dir),
         )
 
         service = ExportService(_sample_timetable())
-        filepath = service.generate()
+        filepath = service.generate_faculty_wise()
 
         from openpyxl import load_workbook
         wb = load_workbook(filepath)
-        ws = wb["Faculty Workload"]
+        assert "PD" in wb.sheetnames
+        assert "AV" in wb.sheetnames
 
-        # Header row should have "Faculty Code"
-        assert ws.cell(row=3, column=1).value == "Faculty Code"
-
-        # Data should have at least PD and AV
-        faculty_codes = []
-        for row in range(4, ws.max_row + 1):
-            val = ws.cell(row=row, column=1).value
-            if val:
-                faculty_codes.append(val)
-
-        assert "PD" in faculty_codes
-        assert "AV" in faculty_codes
-
-    def test_empty_timetable(self, tmp_path, monkeypatch):
+    def test_empty_timetable(self, export_tmp_dir, monkeypatch):
         """An empty timetable should still produce a valid file."""
         monkeypatch.setattr(
             "backend.services.export_service.OUTPUT_DIR",
-            str(tmp_path),
+            str(export_tmp_dir),
         )
 
         service = ExportService([])
-        filepath = service.generate()
+        filepath = service.generate_overall()
 
         assert os.path.exists(filepath)
         assert filepath.endswith(".xlsx")
-
-    def test_cell_format(self):
-        """Cell content should be formatted as code/faculty/room."""
-        service = ExportService(_sample_timetable())
-        entry = _sample_timetable()[0]
-        result = service._format_cell(entry)
-
-        assert "IT205" in result
-        assert "PD" in result
-        assert "LT-1" in result

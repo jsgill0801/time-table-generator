@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.faculty import Faculty
-from backend.routes.auth_routes import login_required
+from backend.routes.auth_routes import login_required, admin_required
 
 
 faculty_bp = Blueprint("faculties", __name__)
@@ -46,7 +46,7 @@ def get_faculty(faculty_code):
 
 
 @faculty_bp.route("/", methods=["POST"])
-@login_required
+@admin_required
 def create_faculty():
     """Create a new faculty member."""
     data = request.get_json()
@@ -77,7 +77,7 @@ def create_faculty():
 
 
 @faculty_bp.route("/<string:faculty_code>", methods=["PUT"])
-@login_required
+@admin_required
 def update_faculty(faculty_code):
     """Update an existing faculty member."""
     data = request.get_json()
@@ -106,7 +106,7 @@ def update_faculty(faculty_code):
 
 
 @faculty_bp.route("/<string:faculty_code>", methods=["DELETE"])
-@login_required
+@admin_required
 def delete_faculty(faculty_code):
     """Delete a faculty member by their code."""
     db = next(get_db())

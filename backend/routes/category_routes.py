@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.category import Category
-from backend.routes.auth_routes import login_required
+from backend.routes.auth_routes import login_required, admin_required
 
 
 category_bp = Blueprint("categories", __name__)
@@ -31,7 +31,7 @@ def list_categories():
 
 
 @category_bp.route("/", methods=["POST"])
-@login_required
+@admin_required
 def create_category():
     """Create a new category."""
     data = request.get_json()
@@ -59,7 +59,7 @@ def create_category():
 
 
 @category_bp.route("/<int:category_id>", methods=["PUT"])
-@login_required
+@admin_required
 def update_category(category_id):
     """Rename a category."""
     data = request.get_json()
@@ -84,7 +84,7 @@ def update_category(category_id):
 
 
 @category_bp.route("/<int:category_id>", methods=["DELETE"])
-@login_required
+@admin_required
 def delete_category(category_id):
     """Delete a category by its ID."""
     db = next(get_db())
