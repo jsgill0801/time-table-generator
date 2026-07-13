@@ -25,8 +25,8 @@ frontend_bp = Blueprint("frontend", __name__)
 
 @frontend_bp.route("/")
 def index():
-    """Redirect root to login page."""
-    return redirect("/login")
+    """Health check for Render."""
+    return {"status": "healthy", "service": "timetable-backend"}, 200
 
 
 @frontend_bp.route("/login")
