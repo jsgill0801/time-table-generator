@@ -38,7 +38,7 @@ def create_app(config_class=DevelopmentConfig):
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
     # Allow the frontend (running on a different port) to call the API
-    CORS(app, supports_credentials=True)
+    CORS(app, supports_credentials=True, origins=app.config.get("ALLOWED_ORIGINS", []))
 
     # ------------------------------------------------------------------
     # Set up structured logging

@@ -24,6 +24,15 @@ class Config:
 
     # Flask-Session settings
     SESSION_TYPE = "filesystem"
+    SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() == "true"
+
+    # Allowed CORS Origins (comma-separated string)
+    ALLOWED_ORIGINS = [
+        o.strip()
+        for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",")
+        if o.strip()
+    ]
 
     DEFAULT_ADMIN_USERNAME = os.getenv("DEFAULT_ADMIN_USERNAME", "admin")
     DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@ttg.local")

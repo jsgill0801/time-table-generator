@@ -3,7 +3,7 @@
  * Every function returns a Promise.
  */
 const API = (function () {
-    const BASE = "/api/v1";
+    const BASE = window.API_BASE_URL || "/api/v1";
     const JSON_HEADERS = { "Content-Type": "application/json" };
     const CRED = "include";
 

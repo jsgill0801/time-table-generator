@@ -1,0 +1,18 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/templates/login.html" },
+    { "source": "/login", "destination": "/templates/login.html" },
+    { "source": "/signup", "destination": "/templates/signup.html" },
+    { "source": "/dashboard", "destination": "/templates/dashboard.html" },
+    { "source": "/courses", "destination": "/templates/courses.html" },
+    { "source": "/batches", "destination": "/templates/batches.html" },
+    { "source": "/faculties", "destination": "/templates/faculties.html" },
+    { "source": "/classrooms", "destination": "/templates/classrooms.html" },
+    { "source": "/slots", "destination": "/templates/slots.html" },
+    { "source": "/categories", "destination": "/templates/categories.html" },
+    { "source": "/mappings", "destination": "/templates/mappings.html" },
+    { "source": "/timetable", "destination": "/templates/timetable.html" },
+    { "source": "/users", "destination": "/templates/users.html" }
+  ]
+}
