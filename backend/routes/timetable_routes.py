@@ -17,7 +17,7 @@ from flask import Blueprint, jsonify
 
 from backend.db import get_db
 from backend.models.timetable import Timetable
-from backend.routes.auth_routes import login_required
+from backend.routes.auth_routes import login_required, get_current_user_id
 from backend.utils.helpers import DAY_ORDER
 
 
@@ -32,11 +32,12 @@ timetable_bp = Blueprint("timetable", __name__)
 @login_required
 def get_full_timetable():
     """
-    Return the full generated timetable, sorted by day and time.
+    Return the full generated timetable, sorted by day and time for the current user.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        rows = db.query(Timetable).all()
+        rows = db.query(Timetable).filter(Timetable.user_id == user_id).all()
 
         if not rows:
             return jsonify({
@@ -73,15 +74,19 @@ def get_full_timetable():
 @login_required
 def get_batch_timetable(batch_label):
     """
-    Return timetable entries for a specific batch.
+    Return timetable entries for a specific batch for the current user.
 
     The batch_label should be URL-encoded if it contains spaces.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
         rows = (
             db.query(Timetable)
-            .filter(Timetable.batch_label == batch_label)
+            .filter(
+                Timetable.batch_label == batch_label,
+                Timetable.user_id == user_id
+            )
             .all()
         )
 
@@ -115,13 +120,17 @@ def get_batch_timetable(batch_label):
 @login_required
 def get_faculty_timetable(faculty_code):
     """
-    Return timetable entries for a specific faculty member.
+    Return timetable entries for a specific faculty member for the current user.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
         rows = (
             db.query(Timetable)
-            .filter(Timetable.faculty_code == faculty_code.upper())
+            .filter(
+                Timetable.faculty_code == faculty_code.upper(),
+                Timetable.user_id == user_id
+            )
             .all()
         )
 
@@ -155,11 +164,12 @@ def get_faculty_timetable(faculty_code):
 @login_required
 def get_timetable_summary():
     """
-    Return high-level statistics about the generated timetable.
+    Return high-level statistics about the generated timetable for the current user.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        rows = db.query(Timetable).all()
+        rows = db.query(Timetable).filter(Timetable.user_id == user_id).all()
 
         if not rows:
             return jsonify({

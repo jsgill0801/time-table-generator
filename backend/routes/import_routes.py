@@ -5,6 +5,9 @@ Accepts CSV file uploads for each entity type, validates
 every row using the appropriate parser, and bulk-inserts
 the records into the database.
 
+All imported records are tagged with the current user's ID
+for data isolation.
+
 Endpoints:
     POST /courses          Import courses from CSV
     POST /batches          Import batches from CSV
@@ -39,7 +42,7 @@ from backend.parsers.batch_course_parser import BatchCourseParser
 from backend.parsers.faculty_course_parser import FacultyCourseParser
 from backend.parsers.course_bundle_parser import CourseBundleParser
 
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 from backend.utils.errors import DataError
 
 
@@ -79,10 +82,20 @@ def _get_csv_headers(csv_text: str) -> set[str]:
     return {name.strip() for name in reader.fieldnames if name}
 
 
-def _import_course_bundle(db, csv_text: str):
+def _import_course_bundle(db, csv_text: str, user_id: int):
     """Import courses plus their batch/faculty mappings from one CSV."""
-    batches = db.query(Batch).order_by(Batch.program, Batch.semester, Batch.branch).all()
-    faculty_rows = db.query(Faculty).order_by(Faculty.faculty_code).all()
+    batches = (
+        db.query(Batch)
+        .filter(Batch.user_id == user_id)
+        .order_by(Batch.program, Batch.semester, Batch.branch)
+        .all()
+    )
+    faculty_rows = (
+        db.query(Faculty)
+        .filter(Faculty.user_id == user_id)
+        .order_by(Faculty.faculty_code)
+        .all()
+    )
 
     if not batches:
         raise DataError(
@@ -108,7 +121,7 @@ def _import_course_bundle(db, csv_text: str):
 
     category_lookup = {
         category.category_name: category
-        for category in db.query(Category).all()
+        for category in db.query(Category).filter(Category.user_id == user_id).all()
     }
 
     course_created = 0
@@ -120,11 +133,13 @@ def _import_course_bundle(db, csv_text: str):
 
     for row in rows:
         course = db.query(Course).filter(
-            Course.course_code == row["course_code"]
+            Course.course_code == row["course_code"],
+            Course.user_id == user_id,
         ).first()
 
         if not course:
             course = Course(
+                user_id=user_id,
                 course_code=row["course_code"],
                 course_name=row["course_name"],
                 lectures=row["lectures"],
@@ -141,12 +156,14 @@ def _import_course_bundle(db, csv_text: str):
         existing_faculty_link = db.query(FacultyCourse).filter(
             FacultyCourse.course_id == course.course_id,
             FacultyCourse.faculty_code == row["faculty_code"],
+            FacultyCourse.user_id == user_id,
         ).first()
 
         if existing_faculty_link:
             faculty_skipped += 1
         else:
             db.add(FacultyCourse(
+                user_id=user_id,
                 course_id=course.course_id,
                 faculty_code=row["faculty_code"],
             ))
@@ -160,7 +177,10 @@ def _import_course_bundle(db, csv_text: str):
                 category = category_lookup.get(mapping["category"])
 
                 if not category:
-                    category = Category(category_name=mapping["category"])
+                    category = Category(
+                        user_id=user_id,
+                        category_name=mapping["category"],
+                    )
                     db.add(category)
                     db.flush()
                     category_lookup[category.category_name] = category
@@ -168,6 +188,7 @@ def _import_course_bundle(db, csv_text: str):
             existing_batch_link = db.query(BatchCourse).filter(
                 BatchCourse.course_id == course.course_id,
                 BatchCourse.batch_id == batch.batch_id,
+                BatchCourse.user_id == user_id,
             ).first()
 
             if existing_batch_link:
@@ -175,6 +196,7 @@ def _import_course_bundle(db, csv_text: str):
                 continue
 
             db.add(BatchCourse(
+                user_id=user_id,
                 course_id=course.course_id,
                 batch_id=batch.batch_id,
                 category_id=category.category_id if category else None,
@@ -208,6 +230,7 @@ def _import_course_bundle(db, csv_text: str):
 @admin_required
 def import_courses():
     """Parse and insert courses from a CSV file."""
+    user_id = get_current_user_id()
     csv_text = _read_csv_from_request()
     if not csv_text:
         return jsonify({"error": "No CSV data provided."}), 400
@@ -217,7 +240,7 @@ def import_courses():
         headers = _get_csv_headers(csv_text)
 
         if "batches" in headers or "faculty" in headers:
-            return _import_course_bundle(db, csv_text)
+            return _import_course_bundle(db, csv_text, user_id)
 
         # Parse and validate
         parser = CourseParser()
@@ -227,9 +250,10 @@ def import_courses():
         skipped = 0
 
         for row in rows:
-            # Skip if course code already exists
+            # Skip if course code already exists for this user
             existing = db.query(Course).filter(
-                Course.course_code == row["course_code"]
+                Course.course_code == row["course_code"],
+                Course.user_id == user_id,
             ).first()
 
             if existing:
@@ -237,6 +261,7 @@ def import_courses():
                 continue
 
             course = Course(
+                user_id=user_id,
                 course_code=row["course_code"],
                 course_name=row["course_name"],
                 lectures=row["lectures"],
@@ -270,6 +295,7 @@ def import_courses():
 @admin_required
 def import_batches():
     """Parse and insert batches from a CSV file."""
+    user_id = get_current_user_id()
     csv_text = _read_csv_from_request()
     if not csv_text:
         return jsonify({"error": "No CSV data provided."}), 400
@@ -288,6 +314,7 @@ def import_batches():
                 Batch.branch == row["branch"],
                 Batch.semester == row["semester"],
                 Batch.section == row["section"],
+                Batch.user_id == user_id,
             ).first()
 
             if existing:
@@ -295,6 +322,7 @@ def import_batches():
                 continue
 
             batch = Batch(
+                user_id=user_id,
                 program=row["program"],
                 branch=row["branch"],
                 semester=row["semester"],
@@ -326,6 +354,7 @@ def import_batches():
 @admin_required
 def import_faculties():
     """Parse and insert faculty members from a CSV file."""
+    user_id = get_current_user_id()
     csv_text = _read_csv_from_request()
     if not csv_text:
         return jsonify({"error": "No CSV data provided."}), 400
@@ -339,13 +368,17 @@ def import_faculties():
         skipped = 0
 
         for row in rows:
-            existing = db.query(Faculty).get(row["faculty_code"])
+            existing = db.query(Faculty).filter(
+                Faculty.faculty_code == row["faculty_code"],
+                Faculty.user_id == user_id,
+            ).first()
 
             if existing:
                 skipped += 1
                 continue
 
             faculty = Faculty(
+                user_id=user_id,
                 faculty_code=row["faculty_code"],
                 faculty_name=row["faculty_name"],
                 faculty_email=row["faculty_email"],
@@ -377,6 +410,7 @@ def import_faculties():
 @admin_required
 def import_classrooms():
     """Parse and insert classrooms from a CSV file."""
+    user_id = get_current_user_id()
     csv_text = _read_csv_from_request()
     if not csv_text:
         return jsonify({"error": "No CSV data provided."}), 400
@@ -390,13 +424,17 @@ def import_classrooms():
         skipped = 0
 
         for row in rows:
-            existing = db.query(Classroom).get(row["classroom_name"])
+            existing = db.query(Classroom).filter(
+                Classroom.classroom_name == row["classroom_name"],
+                Classroom.user_id == user_id,
+            ).first()
 
             if existing:
                 skipped += 1
                 continue
 
             room = Classroom(
+                user_id=user_id,
                 classroom_name=row["classroom_name"],
                 capacity=row["capacity"],
             )
@@ -426,6 +464,7 @@ def import_classrooms():
 @admin_required
 def import_slots():
     """Parse and insert time slots from a CSV file."""
+    user_id = get_current_user_id()
     csv_text = _read_csv_from_request()
     if not csv_text:
         return jsonify({"error": "No CSV data provided."}), 400
@@ -439,7 +478,10 @@ def import_slots():
         skipped = 0
 
         for row in rows:
-            existing = db.query(Slot).get(row["slot_id"])
+            existing = db.query(Slot).filter(
+                Slot.slot_id == row["slot_id"],
+                Slot.user_id == user_id,
+            ).first()
 
             if existing:
                 skipped += 1
@@ -450,6 +492,7 @@ def import_slots():
             end_parts = row["end_time"].split(":")
 
             slot = Slot(
+                user_id=user_id,
                 slot_id=row["slot_id"],
                 day_of_week=row["day_of_week"],
                 start_time=dt_time(int(start_parts[0]), int(start_parts[1])),
@@ -482,6 +525,7 @@ def import_slots():
 @admin_required
 def import_categories():
     """Parse and insert categories from a CSV file."""
+    user_id = get_current_user_id()
     csv_text = _read_csv_from_request()
     if not csv_text:
         return jsonify({"error": "No CSV data provided."}), 400
@@ -499,14 +543,18 @@ def import_categories():
                 continue
 
             existing = db.query(Category).filter(
-                Category.category_name == name
+                Category.category_name == name,
+                Category.user_id == user_id,
             ).first()
 
             if existing:
                 skipped += 1
                 continue
 
-            cat = Category(category_name=name)
+            cat = Category(
+                user_id=user_id,
+                category_name=name,
+            )
             db.add(cat)
             created += 1
 
@@ -538,15 +586,16 @@ def import_batch_courses():
     This endpoint requires that courses and batches have
     already been imported, since the parser performs FK validation.
     """
+    user_id = get_current_user_id()
     csv_text = _read_csv_from_request()
     if not csv_text:
         return jsonify({"error": "No CSV data provided."}), 400
 
     db = next(get_db())
     try:
-        # Build the known-entity sets for FK validation
+        # Build the known-entity sets for FK validation (user-scoped)
         known_course_codes = {
-            c.course_code for c in db.query(Course).all()
+            c.course_code for c in db.query(Course).filter(Course.user_id == user_id).all()
         }
 
         known_batches = [
@@ -556,7 +605,7 @@ def import_batch_courses():
                 "semester": b.semester,
                 "section": b.section,
             }
-            for b in db.query(Batch).all()
+            for b in db.query(Batch).filter(Batch.user_id == user_id).all()
         ]
 
         # Parse with FK validation
@@ -567,9 +616,10 @@ def import_batch_courses():
         skipped = 0
 
         for row in rows:
-            # Resolve the course_id and batch_id from the codes/identifiers
+            # Resolve the course_id and batch_id from the codes/identifiers (user-scoped)
             course = db.query(Course).filter(
-                Course.course_code == row["course_code"]
+                Course.course_code == row["course_code"],
+                Course.user_id == user_id,
             ).first()
 
             batch = db.query(Batch).filter(
@@ -577,33 +627,40 @@ def import_batch_courses():
                 Batch.branch == row["branch"],
                 Batch.semester == row["semester"],
                 Batch.section == row["section"],
+                Batch.user_id == user_id,
             ).first()
 
-            # Skip if this mapping already exists
+            # Skip if this mapping already exists for this user
             existing = db.query(BatchCourse).filter(
                 BatchCourse.course_id == course.course_id,
                 BatchCourse.batch_id == batch.batch_id,
+                BatchCourse.user_id == user_id,
             ).first()
 
             if existing:
                 skipped += 1
                 continue
 
-            # Resolve or create the category if provided
+            # Resolve or create the category if provided (user-scoped)
             category_id = None
             if row["category"]:
                 cat = db.query(Category).filter(
-                    Category.category_name == row["category"]
+                    Category.category_name == row["category"],
+                    Category.user_id == user_id,
                 ).first()
 
                 if not cat:
-                    cat = Category(category_name=row["category"])
+                    cat = Category(
+                        user_id=user_id,
+                        category_name=row["category"],
+                    )
                     db.add(cat)
                     db.flush()  # get the ID without committing
 
                 category_id = cat.category_id
 
             bc = BatchCourse(
+                user_id=user_id,
                 course_id=course.course_id,
                 batch_id=batch.batch_id,
                 category_id=category_id,
@@ -640,19 +697,20 @@ def import_faculty_courses():
     This endpoint requires that faculty and courses have
     already been imported, since the parser performs FK validation.
     """
+    user_id = get_current_user_id()
     csv_text = _read_csv_from_request()
     if not csv_text:
         return jsonify({"error": "No CSV data provided."}), 400
 
     db = next(get_db())
     try:
-        # Build the known-entity sets for FK validation
+        # Build the known-entity sets for FK validation (user-scoped)
         known_faculty_codes = {
-            f.faculty_code for f in db.query(Faculty).all()
+            f.faculty_code for f in db.query(Faculty).filter(Faculty.user_id == user_id).all()
         }
 
         known_course_codes = {
-            c.course_code for c in db.query(Course).all()
+            c.course_code for c in db.query(Course).filter(Course.user_id == user_id).all()
         }
 
         # Parse with FK validation
@@ -664,13 +722,15 @@ def import_faculty_courses():
 
         for row in rows:
             course = db.query(Course).filter(
-                Course.course_code == row["course_code"]
+                Course.course_code == row["course_code"],
+                Course.user_id == user_id,
             ).first()
 
-            # Skip if this mapping already exists
+            # Skip if this mapping already exists for this user
             existing = db.query(FacultyCourse).filter(
                 FacultyCourse.course_id == course.course_id,
                 FacultyCourse.faculty_code == row["faculty_code"],
+                FacultyCourse.user_id == user_id,
             ).first()
 
             if existing:
@@ -678,6 +738,7 @@ def import_faculty_courses():
                 continue
 
             fc = FacultyCourse(
+                user_id=user_id,
                 course_id=course.course_id,
                 faculty_code=row["faculty_code"],
             )

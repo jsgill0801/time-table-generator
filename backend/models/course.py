@@ -5,7 +5,7 @@ Represents an academic course with its credit structure
 following the L-T-P-C notation (Lectures, Tutorials, Labs, Credits).
 """
 
-from sqlalchemy import Column, Integer, String, Float, CheckConstraint
+from sqlalchemy import Column, Integer, String, Float, CheckConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 
 from backend.db import Base
@@ -15,8 +15,9 @@ class Course(Base):
     __tablename__ = "course"
 
     course_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("app_user.user_id", ondelete="CASCADE"), nullable=True)
 
-    course_code = Column(String(10), unique=True, nullable=False)
+    course_code = Column(String(10), nullable=False)
     course_name = Column(String(100), nullable=False)
 
     # L-T-P-C credit components

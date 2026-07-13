@@ -1,6 +1,8 @@
 """
 Export routes – Excel download endpoints.
 
+All operations are scoped to the current user's data.
+
 Endpoints:
     GET /download/overall     Download the overall timetable (single sheet)
     GET /download/faculty     Download faculty-wise timetable (one sheet per faculty)
@@ -20,7 +22,7 @@ from backend.db import get_db
 from backend.models.timetable import Timetable
 from backend.models.slot import Slot
 from backend.services.export_service import ExportService
-from backend.routes.auth_routes import login_required
+from backend.routes.auth_routes import login_required, get_current_user_id
 
 logger = logging.getLogger(__name__)
 DEBUG_LOG_PATH = os.path.join(
@@ -50,15 +52,15 @@ def _debug_log(hypothesis_id: str, location: str, message: str, data: dict):
     # endregion
 
 
-def _build_export_service(db):
-    """Fetch timetable data and create the ExportService instance."""
-    rows = db.query(Timetable).all()
+def _build_export_service(db, user_id):
+    """Fetch timetable data for the current user and create the ExportService instance."""
+    rows = db.query(Timetable).filter(Timetable.user_id == user_id).all()
 
     if not rows:
         return None, None
 
     timetable_data = [r.to_dict() for r in rows]
-    slot_data = [slot.to_dict() for slot in db.query(Slot).all()]
+    slot_data = [slot.to_dict() for slot in db.query(Slot).filter(Slot.user_id == user_id).all()]
     service = ExportService(timetable_data, slot_data)
     return service, timetable_data
 
@@ -66,9 +68,10 @@ def _build_export_service(db):
 def _download(generate_method, label):
     """Shared logic for all four download endpoints."""
     _debug_log("H6", "export_routes.py:_download", "Entered download route", {"label": label})
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        service, _ = _build_export_service(db)
+        service, _ = _build_export_service(db, user_id)
 
         if service is None:
             return jsonify({
@@ -180,9 +183,10 @@ def preview_timetable():
     This is useful for the frontend to render a grid view
     without downloading the actual file.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        rows = db.query(Timetable).all()
+        rows = db.query(Timetable).filter(Timetable.user_id == user_id).all()
 
         if not rows:
             return jsonify({

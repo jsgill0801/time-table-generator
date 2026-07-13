@@ -17,6 +17,7 @@ class BatchCourse(Base):
     __tablename__ = "batch_course"
 
     auto_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("app_user.user_id", ondelete="CASCADE"), nullable=True)
 
     course_id = Column(
         Integer,

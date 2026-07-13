@@ -4,7 +4,7 @@ Faculty model.
 Represents a faculty member with their teaching constraints.
 """
 
-from sqlalchemy import Column, Integer, String, CheckConstraint
+from sqlalchemy import Column, Integer, String, CheckConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 
 from backend.db import Base
@@ -13,8 +13,8 @@ from backend.db import Base
 class Faculty(Base):
     __tablename__ = "faculty"
 
-    # Faculty code is the natural primary key (e.g. "PD", "AV", "SS")
     faculty_code = Column(String(10), primary_key=True)
+    user_id = Column(Integer, ForeignKey("app_user.user_id", ondelete="CASCADE"), nullable=True)
 
     faculty_name = Column(String(50), nullable=False)
     faculty_email = Column(String(100), nullable=True)

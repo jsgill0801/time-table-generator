@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.faculty import Faculty
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 
 
 faculty_bp = Blueprint("faculties", __name__)
@@ -22,10 +22,11 @@ faculty_bp = Blueprint("faculties", __name__)
 @faculty_bp.route("/", methods=["GET"])
 @login_required
 def list_faculties():
-    """Return all faculty ordered by code."""
+    """Return all faculty ordered by code for the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        faculties = db.query(Faculty).order_by(Faculty.faculty_code).all()
+        faculties = db.query(Faculty).filter(Faculty.user_id == user_id).order_by(Faculty.faculty_code).all()
         return jsonify([f.to_dict() for f in faculties]), 200
     finally:
         db.close()
@@ -34,10 +35,14 @@ def list_faculties():
 @faculty_bp.route("/<string:faculty_code>", methods=["GET"])
 @login_required
 def get_faculty(faculty_code):
-    """Return a single faculty member by their code."""
+    """Return a single faculty member by their code if they belong to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        faculty = db.query(Faculty).get(faculty_code.upper())
+        faculty = db.query(Faculty).filter(
+            Faculty.faculty_code == faculty_code.upper(),
+            Faculty.user_id == user_id
+        ).first()
         if not faculty:
             return jsonify({"error": "Faculty not found."}), 404
         return jsonify(faculty.to_dict()), 200
@@ -48,17 +53,22 @@ def get_faculty(faculty_code):
 @faculty_bp.route("/", methods=["POST"])
 @admin_required
 def create_faculty():
-    """Create a new faculty member."""
+    """Create a new faculty member for the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
         code = data["faculty_code"].strip().upper()
 
-        existing = db.query(Faculty).get(code)
+        existing = db.query(Faculty).filter(
+            Faculty.faculty_code == code,
+            Faculty.user_id == user_id
+        ).first()
         if existing:
             return jsonify({"error": "A faculty with this code already exists."}), 409
 
         faculty = Faculty(
+            user_id=user_id,
             faculty_code=code,
             faculty_name=data["faculty_name"].strip(),
             faculty_email=data.get("faculty_email", "").strip() or None,
@@ -79,11 +89,15 @@ def create_faculty():
 @faculty_bp.route("/<string:faculty_code>", methods=["PUT"])
 @admin_required
 def update_faculty(faculty_code):
-    """Update an existing faculty member."""
+    """Update an existing faculty member if they belong to the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
-        faculty = db.query(Faculty).get(faculty_code.upper())
+        faculty = db.query(Faculty).filter(
+            Faculty.faculty_code == faculty_code.upper(),
+            Faculty.user_id == user_id
+        ).first()
         if not faculty:
             return jsonify({"error": "Faculty not found."}), 404
 
@@ -108,10 +122,14 @@ def update_faculty(faculty_code):
 @faculty_bp.route("/<string:faculty_code>", methods=["DELETE"])
 @admin_required
 def delete_faculty(faculty_code):
-    """Delete a faculty member by their code."""
+    """Delete a faculty member by their code if they belong to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        faculty = db.query(Faculty).get(faculty_code.upper())
+        faculty = db.query(Faculty).filter(
+            Faculty.faculty_code == faculty_code.upper(),
+            Faculty.user_id == user_id
+        ).first()
         if not faculty:
             return jsonify({"error": "Faculty not found."}), 404
 

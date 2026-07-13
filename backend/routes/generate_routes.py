@@ -6,6 +6,8 @@ Handles the generation workflow:
     2. If valid, trigger the scheduling engine
     3. Provide download endpoints for generated outputs
 
+All operations are scoped to the current user's data.
+
 Endpoints:
     POST /                  Trigger timetable generation
     GET  /validate          Run validation checks without generating
@@ -23,7 +25,7 @@ from backend.services.validation_service import ValidationService
 from backend.services.data_service import DataService
 from backend.services.scheduler import Scheduler
 from backend.services.optimiser import Optimiser
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 
 from datetime import datetime, time as dt_time
 from collections import Counter
@@ -45,7 +47,7 @@ DEBUG_LOG_PATH = os.path.join(
 @admin_required
 def generate_timetable():
     """
-    Generate the timetable.
+    Generate the timetable for the current user.
 
     Steps:
         1. Run all validation checks
@@ -57,6 +59,7 @@ def generate_timetable():
         7. Save results to database
         8. Return the result summary
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
         run_started = datetime.utcnow()
@@ -68,7 +71,7 @@ def generate_timetable():
                 "hypothesisId": "H12",
                 "location": "generate_routes.py:generate_timetable",
                 "message": "Entered generate_timetable route",
-                "data": {},
+                "data": {"user_id": user_id},
                 "timestamp": int(datetime.utcnow().timestamp() * 1000),
             }
             with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
@@ -76,8 +79,8 @@ def generate_timetable():
         except Exception:
             pass
 
-        # Step 1: Run validation checks
-        validator = ValidationService(db)
+        # Step 1: Run validation checks (user-scoped)
+        validator = ValidationService(db, user_id=user_id)
         errors = validator.run_all_checks()
 
         if errors:
@@ -87,13 +90,13 @@ def generate_timetable():
                 "errors": errors,
             }), 400
 
-        # Step 2: Clear previous generation results
-        db.query(Timetable).delete()
-        db.query(ConflictReport).delete()
+        # Step 2: Clear previous generation results (user-scoped)
+        db.query(Timetable).filter(Timetable.user_id == user_id).delete()
+        db.query(ConflictReport).filter(ConflictReport.user_id == user_id).delete()
         db.commit()
 
-        # Step 3: Fetch and preprocess all input data
-        data_service = DataService(db)
+        # Step 3: Fetch and preprocess all input data (user-scoped)
+        data_service = DataService(db, user_id=user_id)
         scheduling_input = data_service.get_scheduling_input()
 
         demand = scheduling_input["demand"]
@@ -233,7 +236,7 @@ def generate_timetable():
             pass
         # endregion
 
-        # Step 6: Save assignments to the timetable table
+        # Step 6: Save assignments to the timetable table (with user_id)
         for a in result["assignments"]:
             # Convert time strings back to time objects if needed
             start = a["start_time"]
@@ -247,6 +250,7 @@ def generate_timetable():
                 end = dt_time(int(parts[0]), int(parts[1]))
 
             row = Timetable(
+                user_id=user_id,
                 generated_at=run_started,
                 batch_course_id=a["batch_course_id"],
                 faculty_code=a["faculty_code"],
@@ -264,9 +268,10 @@ def generate_timetable():
             )
             db.add(row)
 
-        # Step 7: Save conflicts to the conflict_report table
+        # Step 7: Save conflicts to the conflict_report table (with user_id)
         for c in result["conflicts"]:
             row = ConflictReport(
+                user_id=user_id,
                 course_code=c["course_code"],
                 course_name=c["course_name"],
                 batch_label=c["batch_label"],
@@ -301,7 +306,7 @@ def generate_timetable():
             "total_sessions": stats["total_demand"],
             "scheduled_sessions": stats["placed"],
             "conflicts_count": stats["unresolved"],
-            "conflicts": [c.to_dict() for c in db.query(ConflictReport).all()],
+            "conflicts": [c.to_dict() for c in db.query(ConflictReport).filter(ConflictReport.user_id == user_id).all()],
         }), 200
 
     except Exception as e:
@@ -322,24 +327,18 @@ def generate_timetable():
 @login_required
 def validate_data():
     """
-    Run all pre-generation validation checks and return the results.
-
-    This lets the user check for issues before triggering
-    a full generation run.
-
-    Returns:
-        - status: "valid" or "invalid"
-        - errors: list of issues found (empty if valid)
-        - summary: data counts for quick overview
+    Run all pre-generation validation checks and return the results
+    for the current user's data.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        # Run validation
-        validator = ValidationService(db)
+        # Run validation (user-scoped)
+        validator = ValidationService(db, user_id=user_id)
         errors = validator.run_all_checks()
 
-        # Also gather a quick data summary
-        data_service = DataService(db)
+        # Also gather a quick data summary (user-scoped)
+        data_service = DataService(db, user_id=user_id)
 
         courses = data_service.fetch_courses()
         batches = data_service.fetch_batches()
@@ -386,12 +385,14 @@ def validate_data():
 def get_conflicts():
     """
     Return the list of unresolved scheduling conflicts
-    from the most recent generation run.
+    from the most recent generation run for the current user.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
         conflicts = (
             db.query(ConflictReport)
+            .filter(ConflictReport.user_id == user_id)
             .order_by(ConflictReport.conflict_id)
             .all()
         )

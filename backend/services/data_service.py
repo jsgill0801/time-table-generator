@@ -4,6 +4,8 @@ Data Service – fetching and preprocessing.
 This module is the bridge between the database and the
 scheduling engine. It fetches raw records, cleans them,
 and builds the data structures that the scheduler expects.
+
+All queries are filtered by user_id to ensure data isolation.
 """
 
 from collections import defaultdict
@@ -35,14 +37,17 @@ class DataService:
     Central service for fetching data from the database and
     preprocessing it into clean structures for the scheduling engine.
 
+    All queries are scoped to a specific user_id for data isolation.
+
     Usage:
         db = next(get_db())
-        service = DataService(db)
+        service = DataService(db, user_id=current_user_id)
         scheduling_input = service.get_scheduling_input()
     """
 
-    def __init__(self, db_session: Session):
+    def __init__(self, db_session: Session, user_id: int = None):
         self.session = db_session
+        self.user_id = user_id
         self._debug_log_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
             "debug-ecec21.log",
@@ -53,9 +58,15 @@ class DataService:
     #  FETCHERS – pull raw data from the database
     # =================================================================
 
+    def _user_filter(self, model):
+        """Return a filter clause for the current user, or no filter if user_id is None."""
+        if self.user_id is not None:
+            return model.user_id == self.user_id
+        return True  # No filter — backward compatibility
+
     def fetch_courses(self) -> list[dict]:
         """
-        Fetch all courses ordered by course code.
+        Fetch all courses ordered by course code for the current user.
 
         Returns a list of dicts, each containing:
             course_id, course_code, course_name,
@@ -64,6 +75,7 @@ class DataService:
         courses = (
             self.session
             .query(Course)
+            .filter(self._user_filter(Course))
             .order_by(Course.course_code)
             .all()
         )
@@ -72,7 +84,7 @@ class DataService:
 
     def fetch_batches(self) -> list[dict]:
         """
-        Fetch all batches ordered by program, semester, branch.
+        Fetch all batches ordered by program, semester, branch for the current user.
 
         Returns a list of dicts, each containing:
             batch_id, program, branch, semester, section, label
@@ -80,6 +92,7 @@ class DataService:
         batches = (
             self.session
             .query(Batch)
+            .filter(self._user_filter(Batch))
             .order_by(Batch.program, Batch.semester, Batch.branch)
             .all()
         )
@@ -88,7 +101,7 @@ class DataService:
 
     def fetch_faculties(self) -> list[dict]:
         """
-        Fetch all faculty members ordered by faculty code.
+        Fetch all faculty members ordered by faculty code for the current user.
 
         Returns a list of dicts, each containing:
             faculty_code, faculty_name, faculty_email, max_load
@@ -96,6 +109,7 @@ class DataService:
         faculties = (
             self.session
             .query(Faculty)
+            .filter(self._user_filter(Faculty))
             .order_by(Faculty.faculty_code)
             .all()
         )
@@ -104,7 +118,7 @@ class DataService:
 
     def fetch_classrooms(self) -> list[dict]:
         """
-        Fetch all classrooms ordered by name.
+        Fetch all classrooms ordered by name for the current user.
 
         Returns a list of dicts, each containing:
             classroom_name, capacity
@@ -112,6 +126,7 @@ class DataService:
         classrooms = (
             self.session
             .query(Classroom)
+            .filter(self._user_filter(Classroom))
             .order_by(Classroom.classroom_name)
             .all()
         )
@@ -120,7 +135,7 @@ class DataService:
 
     def fetch_slots(self) -> list[dict]:
         """
-        Fetch all time slots, sorted by day of week then start time.
+        Fetch all time slots for the current user, sorted by day of week then start time.
 
         Returns a list of dicts, each containing:
             slot_id, day_of_week, start_time, end_time, slot_name
@@ -128,6 +143,7 @@ class DataService:
         slots = (
             self.session
             .query(Slot)
+            .filter(self._user_filter(Slot))
             .all()
         )
 
@@ -146,17 +162,24 @@ class DataService:
     def fetch_batch_courses(self) -> list[dict]:
         """
         Fetch all batch-course mappings with joined course,
-        batch, and category information.
+        batch, and category information for the current user.
 
         Returns a list of dicts with combined fields from
         all three tables plus the enrollment count.
         """
-        results = (
+        query = (
             self.session
             .query(BatchCourse, Course, Batch, Category)
             .join(Course, BatchCourse.course_id == Course.course_id)
             .join(Batch, BatchCourse.batch_id == Batch.batch_id)
             .outerjoin(Category, BatchCourse.category_id == Category.category_id)
+        )
+
+        if self.user_id is not None:
+            query = query.filter(BatchCourse.user_id == self.user_id)
+
+        results = (
+            query
             .order_by(Batch.program, Batch.semester, Course.course_code)
             .all()
         )
@@ -188,15 +211,22 @@ class DataService:
     def fetch_faculty_courses(self) -> list[dict]:
         """
         Fetch all faculty-course mappings with joined
-        faculty and course details.
+        faculty and course details for the current user.
 
         Returns a list of dicts combining fields from both tables.
         """
-        results = (
+        query = (
             self.session
             .query(FacultyCourse, Faculty, Course)
             .join(Faculty, FacultyCourse.faculty_code == Faculty.faculty_code)
             .join(Course, FacultyCourse.course_id == Course.course_id)
+        )
+
+        if self.user_id is not None:
+            query = query.filter(FacultyCourse.user_id == self.user_id)
+
+        results = (
+            query
             .order_by(Faculty.faculty_code, Course.course_code)
             .all()
         )

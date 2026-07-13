@@ -15,7 +15,7 @@ from backend.db import get_db
 from backend.models.faculty_course import FacultyCourse
 from backend.models.course import Course
 from backend.models.faculty import Faculty
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 
 
 faculty_course_bp = Blueprint("faculty_courses", __name__)
@@ -24,11 +24,13 @@ faculty_course_bp = Blueprint("faculty_courses", __name__)
 @faculty_course_bp.route("/", methods=["GET"])
 @login_required
 def list_faculty_courses():
-    """Return all faculty-course mappings with joined details."""
+    """Return all faculty-course mappings with joined details for the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
         results = (
             db.query(FacultyCourse, Faculty, Course)
+            .filter(FacultyCourse.user_id == user_id)
             .join(Faculty, FacultyCourse.faculty_code == Faculty.faculty_code)
             .join(Course, FacultyCourse.course_id == Course.course_id)
             .order_by(Faculty.faculty_code, Course.course_code)
@@ -54,28 +56,40 @@ def list_faculty_courses():
 @faculty_course_bp.route("/", methods=["POST"])
 @admin_required
 def create_faculty_course():
-    """Assign a faculty member to a course."""
+    """Assign a faculty member to a course for the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
         course_id = int(data["course_id"])
         faculty_code = data["faculty_code"].strip().upper()
 
-        # Verify the course and faculty exist
-        if not db.query(Course).get(course_id):
+        # Verify the course and faculty exist and belong to the current user
+        course = db.query(Course).filter(
+            Course.course_id == course_id,
+            Course.user_id == user_id
+        ).first()
+        if not course:
             return jsonify({"error": "Course not found."}), 404
-        if not db.query(Faculty).get(faculty_code):
+        
+        faculty = db.query(Faculty).filter(
+            Faculty.faculty_code == faculty_code,
+            Faculty.user_id == user_id
+        ).first()
+        if not faculty:
             return jsonify({"error": "Faculty not found."}), 404
 
         # Check for duplicate
         existing = db.query(FacultyCourse).filter(
             FacultyCourse.course_id == course_id,
             FacultyCourse.faculty_code == faculty_code,
+            FacultyCourse.user_id == user_id
         ).first()
         if existing:
             return jsonify({"error": "This faculty is already assigned to this course."}), 409
 
         fc = FacultyCourse(
+            user_id=user_id,
             course_id=course_id,
             faculty_code=faculty_code,
         )
@@ -94,10 +108,14 @@ def create_faculty_course():
 @faculty_course_bp.route("/<int:auto_id>", methods=["DELETE"])
 @admin_required
 def delete_faculty_course(auto_id):
-    """Remove a faculty-course assignment."""
+    """Remove a faculty-course assignment if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        fc = db.query(FacultyCourse).get(auto_id)
+        fc = db.query(FacultyCourse).filter(
+            FacultyCourse.auto_id == auto_id,
+            FacultyCourse.user_id == user_id
+        ).first()
         if not fc:
             return jsonify({"error": "Faculty-course mapping not found."}), 404
 

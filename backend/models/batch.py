@@ -6,7 +6,7 @@ program, branch, semester, and section.
 Example: BTech - CSE - Semester 4 - Section A
 """
 
-from sqlalchemy import Column, Integer, String, UniqueConstraint, CheckConstraint
+from sqlalchemy import Column, Integer, String, UniqueConstraint, CheckConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 
 from backend.db import Base
@@ -17,6 +17,7 @@ class Batch(Base):
     __tablename__ = "batch"
 
     batch_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("app_user.user_id", ondelete="CASCADE"), nullable=True)
 
     program = Column(String(30), nullable=False)     # e.g. "BTech"
     branch = Column(String(30), nullable=False)      # e.g. "ICT + CS"

@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.slot import Slot
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 from backend.utils.helpers import DAY_ORDER, build_slot_id, normalize_day_name
 
 
@@ -23,10 +23,11 @@ slot_bp = Blueprint("slots", __name__)
 @slot_bp.route("/", methods=["GET"])
 @login_required
 def list_slots():
-    """Return all slots sorted by day and start time."""
+    """Return all slots sorted by day and start time for the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        slots = db.query(Slot).all()
+        slots = db.query(Slot).filter(Slot.user_id == user_id).all()
 
         # Sort in Python using our day ordering (Mon -> Fri)
         slot_list = [s.to_dict() for s in slots]
@@ -43,10 +44,14 @@ def list_slots():
 @slot_bp.route("/<string:slot_id>", methods=["GET"])
 @login_required
 def get_slot(slot_id):
-    """Return a single slot by its ID."""
+    """Return a single slot by its ID if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        slot = db.query(Slot).get(slot_id)
+        slot = db.query(Slot).filter(
+            Slot.slot_id == slot_id,
+            Slot.user_id == user_id
+        ).first()
         if not slot:
             return jsonify({"error": "Slot not found."}), 404
         return jsonify(slot.to_dict()), 200
@@ -57,7 +62,8 @@ def get_slot(slot_id):
 @slot_bp.route("/", methods=["POST"])
 @admin_required
 def create_slot():
-    """Create a new time slot."""
+    """Create a new time slot for the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
@@ -74,11 +80,15 @@ def create_slot():
             slot_name,
         )
 
-        existing = db.query(Slot).get(sid)
+        existing = db.query(Slot).filter(
+            Slot.slot_id == sid,
+            Slot.user_id == user_id
+        ).first()
         if existing:
             return jsonify({"error": "A slot with this ID already exists."}), 409
 
         slot = Slot(
+            user_id=user_id,
             slot_id=sid,
             day_of_week=day_of_week,
             start_time=start_time,
@@ -100,11 +110,15 @@ def create_slot():
 @slot_bp.route("/<string:slot_id>", methods=["PUT"])
 @admin_required
 def update_slot(slot_id):
-    """Update an existing slot."""
+    """Update an existing slot if it belongs to the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
-        slot = db.query(Slot).get(slot_id)
+        slot = db.query(Slot).filter(
+            Slot.slot_id == slot_id,
+            Slot.user_id == user_id
+        ).first()
         if not slot:
             return jsonify({"error": "Slot not found."}), 404
 
@@ -135,10 +149,14 @@ def update_slot(slot_id):
 @slot_bp.route("/<string:slot_id>", methods=["DELETE"])
 @admin_required
 def delete_slot(slot_id):
-    """Delete a slot by its ID."""
+    """Delete a slot by its ID if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        slot = db.query(Slot).get(slot_id)
+        slot = db.query(Slot).filter(
+            Slot.slot_id == slot_id,
+            Slot.user_id == user_id
+        ).first()
         if not slot:
             return jsonify({"error": "Slot not found."}), 404
 

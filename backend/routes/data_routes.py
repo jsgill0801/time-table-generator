@@ -4,11 +4,13 @@ Data management routes.
 Provides utility endpoints for clearing data and checking
 the overall health of the loaded dataset.
 
+All operations are scoped to the current user's data.
+
 Endpoints:
-    DELETE /all                     Clear all entity data (keep users)
-    DELETE /timetable               Clear only the generated timetable and conflicts
-    GET    /counts                  Quick count of records in each table
-    POST   /bootstrap-admin-demo    Seed admin demo data into an empty dataset
+    DELETE /all                     Clear all entity data for current user
+    DELETE /timetable               Clear only the generated timetable and conflicts for current user
+    GET    /counts                  Quick count of records in each table for current user
+    POST   /bootstrap-admin-demo    Seed admin demo data into an empty dataset for current user
 """
 
 from flask import Blueprint, jsonify, session
@@ -25,7 +27,7 @@ from backend.models.faculty_course import FacultyCourse
 from backend.models.timetable import Timetable
 from backend.models.conflict_report import ConflictReport
 from backend.models.user import User
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 from backend.seed import seed_dataset
 from backend.utils.errors import DataError
 
@@ -33,48 +35,50 @@ from backend.utils.errors import DataError
 data_bp = Blueprint("data", __name__)
 
 
-def _core_counts(db) -> dict[str, int]:
+def _core_counts(db, user_id) -> dict[str, int]:
+    """Return record counts for all entity tables filtered by user_id."""
     return {
-        "courses": db.query(Course).count(),
-        "batches": db.query(Batch).count(),
-        "faculties": db.query(Faculty).count(),
-        "classrooms": db.query(Classroom).count(),
-        "slots": db.query(Slot).count(),
-        "categories": db.query(Category).count(),
-        "batch_courses": db.query(BatchCourse).count(),
-        "faculty_courses": db.query(FacultyCourse).count(),
-        "timetable_entries": db.query(Timetable).count(),
-        "conflicts": db.query(ConflictReport).count(),
+        "courses": db.query(Course).filter(Course.user_id == user_id).count(),
+        "batches": db.query(Batch).filter(Batch.user_id == user_id).count(),
+        "faculties": db.query(Faculty).filter(Faculty.user_id == user_id).count(),
+        "classrooms": db.query(Classroom).filter(Classroom.user_id == user_id).count(),
+        "slots": db.query(Slot).filter(Slot.user_id == user_id).count(),
+        "categories": db.query(Category).filter(Category.user_id == user_id).count(),
+        "batch_courses": db.query(BatchCourse).filter(BatchCourse.user_id == user_id).count(),
+        "faculty_courses": db.query(FacultyCourse).filter(FacultyCourse.user_id == user_id).count(),
+        "timetable_entries": db.query(Timetable).filter(Timetable.user_id == user_id).count(),
+        "conflicts": db.query(ConflictReport).filter(ConflictReport.user_id == user_id).count(),
     }
 
 
 # -----------------------------------------------------------------
-#  DELETE /all – clear all entity data
+#  DELETE /all – clear all entity data for current user
 # -----------------------------------------------------------------
 
 @data_bp.route("/all", methods=["DELETE"])
 @admin_required
 def clear_all_data():
     """
-    Delete all entity data from the database.
+    Delete all entity data for the current user from the database.
 
     Clears in reverse-dependency order to avoid FK violations.
     User accounts are preserved.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
         # Order matters: delete children before parents
         counts = {}
-        counts["timetable"] = db.query(Timetable).delete()
-        counts["conflict_report"] = db.query(ConflictReport).delete()
-        counts["faculty_course"] = db.query(FacultyCourse).delete()
-        counts["batch_course"] = db.query(BatchCourse).delete()
-        counts["slot"] = db.query(Slot).delete()
-        counts["classroom"] = db.query(Classroom).delete()
-        counts["faculty"] = db.query(Faculty).delete()
-        counts["category"] = db.query(Category).delete()
-        counts["batch"] = db.query(Batch).delete()
-        counts["course"] = db.query(Course).delete()
+        counts["timetable"] = db.query(Timetable).filter(Timetable.user_id == user_id).delete()
+        counts["conflict_report"] = db.query(ConflictReport).filter(ConflictReport.user_id == user_id).delete()
+        counts["faculty_course"] = db.query(FacultyCourse).filter(FacultyCourse.user_id == user_id).delete()
+        counts["batch_course"] = db.query(BatchCourse).filter(BatchCourse.user_id == user_id).delete()
+        counts["slot"] = db.query(Slot).filter(Slot.user_id == user_id).delete()
+        counts["classroom"] = db.query(Classroom).filter(Classroom.user_id == user_id).delete()
+        counts["faculty"] = db.query(Faculty).filter(Faculty.user_id == user_id).delete()
+        counts["category"] = db.query(Category).filter(Category.user_id == user_id).delete()
+        counts["batch"] = db.query(Batch).filter(Batch.user_id == user_id).delete()
+        counts["course"] = db.query(Course).filter(Course.user_id == user_id).delete()
 
         db.commit()
 
@@ -93,20 +97,21 @@ def clear_all_data():
 
 
 # -----------------------------------------------------------------
-#  DELETE /timetable – clear only generated results
+#  DELETE /timetable – clear only generated results for current user
 # -----------------------------------------------------------------
 
 @data_bp.route("/timetable", methods=["DELETE"])
 @admin_required
 def clear_timetable():
     """
-    Delete only the generated timetable and conflict report,
-    leaving all input data intact.
+    Delete only the generated timetable and conflict report
+    for the current user, leaving all input data intact.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        tt_count = db.query(Timetable).delete()
-        cr_count = db.query(ConflictReport).delete()
+        tt_count = db.query(Timetable).filter(Timetable.user_id == user_id).delete()
+        cr_count = db.query(ConflictReport).filter(ConflictReport.user_id == user_id).delete()
 
         db.commit()
 
@@ -138,9 +143,10 @@ def bootstrap_admin_demo():
     This route is intended for empty databases only so the admin can
     sign in and immediately test timetable generation.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        user = db.query(User).filter(User.user_id == session["user_id"]).first()
+        user = db.query(User).filter(User.user_id == user_id).first()
 
         if not user:
             session.clear()
@@ -149,7 +155,7 @@ def bootstrap_admin_demo():
         if user.role != "admin":
             return jsonify({"error": "Only admin users can load the demo dataset."}), 403
 
-        counts = _core_counts(db)
+        counts = _core_counts(db, user_id)
 
         if any(counts.values()):
             return jsonify({
@@ -157,7 +163,7 @@ def bootstrap_admin_demo():
                 "counts": counts,
             }), 409
 
-        seeded, total = seed_dataset(db)
+        seeded, total = seed_dataset(db, user_id=user_id)
 
         return jsonify({
             "message": f"Admin demo data loaded. {total} record(s) inserted.",
@@ -173,19 +179,20 @@ def bootstrap_admin_demo():
 
 
 # -----------------------------------------------------------------
-#  GET /counts – record counts per table
+#  GET /counts – record counts per table for current user
 # -----------------------------------------------------------------
 
 @data_bp.route("/counts", methods=["GET"])
 @login_required
 def get_record_counts():
     """
-    Return the number of records in each entity table.
+    Return the number of records in each entity table for the current user.
     Useful for a quick health check or dashboard.
     """
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        counts = _core_counts(db)
+        counts = _core_counts(db, user_id)
 
         return jsonify({
             "message": "Record counts.",

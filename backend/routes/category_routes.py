@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.category import Category
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 
 
 category_bp = Blueprint("categories", __name__)
@@ -21,10 +21,11 @@ category_bp = Blueprint("categories", __name__)
 @category_bp.route("/", methods=["GET"])
 @login_required
 def list_categories():
-    """Return all categories ordered by name."""
+    """Return all categories ordered by name for the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        categories = db.query(Category).order_by(Category.category_name).all()
+        categories = db.query(Category).filter(Category.user_id == user_id).order_by(Category.category_name).all()
         return jsonify([c.to_dict() for c in categories]), 200
     finally:
         db.close()
@@ -33,19 +34,24 @@ def list_categories():
 @category_bp.route("/", methods=["POST"])
 @admin_required
 def create_category():
-    """Create a new category."""
+    """Create a new category for the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
         name = data["category_name"].strip()
 
         existing = db.query(Category).filter(
-            Category.category_name == name
+            Category.category_name == name,
+            Category.user_id == user_id
         ).first()
         if existing:
             return jsonify({"error": "This category already exists."}), 409
 
-        category = Category(category_name=name)
+        category = Category(
+            user_id=user_id,
+            category_name=name
+        )
         db.add(category)
         db.commit()
         db.refresh(category)
@@ -61,11 +67,15 @@ def create_category():
 @category_bp.route("/<int:category_id>", methods=["PUT"])
 @admin_required
 def update_category(category_id):
-    """Rename a category."""
+    """Rename a category if it belongs to the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
-        category = db.query(Category).get(category_id)
+        category = db.query(Category).filter(
+            Category.category_id == category_id,
+            Category.user_id == user_id
+        ).first()
         if not category:
             return jsonify({"error": "Category not found."}), 404
 
@@ -86,10 +96,14 @@ def update_category(category_id):
 @category_bp.route("/<int:category_id>", methods=["DELETE"])
 @admin_required
 def delete_category(category_id):
-    """Delete a category by its ID."""
+    """Delete a category by its ID if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        category = db.query(Category).get(category_id)
+        category = db.query(Category).filter(
+            Category.category_id == category_id,
+            Category.user_id == user_id
+        ).first()
         if not category:
             return jsonify({"error": "Category not found."}), 404
 

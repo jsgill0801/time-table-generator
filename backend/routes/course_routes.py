@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.course import Course
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 
 
 course_bp = Blueprint("courses", __name__)
@@ -22,10 +22,11 @@ course_bp = Blueprint("courses", __name__)
 @course_bp.route("/", methods=["GET"])
 @login_required
 def list_courses():
-    """Return all courses ordered by course code."""
+    """Return all courses ordered by course code for the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        courses = db.query(Course).order_by(Course.course_code).all()
+        courses = db.query(Course).filter(Course.user_id == user_id).order_by(Course.course_code).all()
         return jsonify([c.to_dict() for c in courses]), 200
     finally:
         db.close()
@@ -34,10 +35,14 @@ def list_courses():
 @course_bp.route("/<int:course_id>", methods=["GET"])
 @login_required
 def get_course(course_id):
-    """Return a single course by its ID."""
+    """Return a single course by its ID if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        course = db.query(Course).get(course_id)
+        course = db.query(Course).filter(
+            Course.course_id == course_id,
+            Course.user_id == user_id
+        ).first()
         if not course:
             return jsonify({"error": "Course not found."}), 404
         return jsonify(course.to_dict()), 200
@@ -48,18 +53,21 @@ def get_course(course_id):
 @course_bp.route("/", methods=["POST"])
 @admin_required
 def create_course():
-    """Create a new course."""
+    """Create a new course for the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
-        # Check for duplicate course code
+        # Check for duplicate course code for this user
         existing = db.query(Course).filter(
-            Course.course_code == data.get("course_code", "").strip().upper()
+            Course.course_code == data.get("course_code", "").strip().upper(),
+            Course.user_id == user_id
         ).first()
         if existing:
             return jsonify({"error": "A course with this code already exists."}), 409
 
         course = Course(
+            user_id=user_id,
             course_code=data["course_code"].strip().upper(),
             course_name=data["course_name"].strip(),
             lectures=int(data["lectures"]),
@@ -82,11 +90,15 @@ def create_course():
 @course_bp.route("/<int:course_id>", methods=["PUT"])
 @admin_required
 def update_course(course_id):
-    """Update an existing course."""
+    """Update an existing course if it belongs to the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
-        course = db.query(Course).get(course_id)
+        course = db.query(Course).filter(
+            Course.course_id == course_id,
+            Course.user_id == user_id
+        ).first()
         if not course:
             return jsonify({"error": "Course not found."}), 404
 
@@ -118,10 +130,14 @@ def update_course(course_id):
 @course_bp.route("/<int:course_id>", methods=["DELETE"])
 @admin_required
 def delete_course(course_id):
-    """Delete a course by its ID."""
+    """Delete a course by its ID if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        course = db.query(Course).get(course_id)
+        course = db.query(Course).filter(
+            Course.course_id == course_id,
+            Course.user_id == user_id
+        ).first()
         if not course:
             return jsonify({"error": "Course not found."}), 404
 

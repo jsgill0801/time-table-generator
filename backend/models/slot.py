@@ -9,7 +9,7 @@ The same slot_name can appear at multiple (day, time) positions.
 For example, "Slot-1" might be Monday 8:00 and also Friday 9:00.
 """
 
-from sqlalchemy import Column, String, Time, CheckConstraint
+from sqlalchemy import Column, String, Time, CheckConstraint, Integer, ForeignKey
 
 from backend.db import Base
 
@@ -19,6 +19,7 @@ class Slot(Base):
 
     # Unique identifier for this (day, time) cell, e.g. "MON-0800"
     slot_id = Column(String(10), primary_key=True)
+    user_id = Column(Integer, ForeignKey("app_user.user_id", ondelete="CASCADE"), nullable=True)
 
     day_of_week = Column(String(10), nullable=False)   # "Monday", "Tuesday", etc.
     start_time = Column(Time, nullable=False)

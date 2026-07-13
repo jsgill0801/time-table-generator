@@ -13,6 +13,8 @@ a specific order because of foreign-key dependencies:
     6. Batch-Courses (depends on courses, batches)
     7. Faculty-Courses (depends on faculty, courses)
 
+All records are tagged with the provided user_id for data isolation.
+
 Usage:
     python -m backend.seed
 """
@@ -59,7 +61,7 @@ def _read_csv(filename: str) -> str:
         return f.read()
 
 
-def seed_courses(db) -> int:
+def seed_courses(db, user_id: int) -> int:
     """Parse and insert sample courses."""
     parser = CourseParser()
     rows = parser.parse(_read_csv("courses.csv"))
@@ -67,12 +69,14 @@ def seed_courses(db) -> int:
     count = 0
     for row in rows:
         existing = db.query(Course).filter(
-            Course.course_code == row["course_code"]
+            Course.course_code == row["course_code"],
+            Course.user_id == user_id,
         ).first()
         if existing:
             continue
 
         db.add(Course(
+            user_id=user_id,
             course_code=row["course_code"],
             course_name=row["course_name"],
             lectures=row["lectures"],
@@ -86,7 +90,7 @@ def seed_courses(db) -> int:
     return count
 
 
-def seed_batches(db) -> int:
+def seed_batches(db, user_id: int) -> int:
     """Parse and insert sample batches."""
     parser = BatchParser()
     rows = parser.parse(_read_csv("batches.csv"))
@@ -98,11 +102,13 @@ def seed_batches(db) -> int:
             Batch.branch == row["branch"],
             Batch.semester == row["semester"],
             Batch.section == row["section"],
+            Batch.user_id == user_id,
         ).first()
         if existing:
             continue
 
         db.add(Batch(
+            user_id=user_id,
             program=row["program"],
             branch=row["branch"],
             semester=row["semester"],
@@ -114,18 +120,22 @@ def seed_batches(db) -> int:
     return count
 
 
-def seed_faculty(db) -> int:
+def seed_faculty(db, user_id: int) -> int:
     """Parse and insert sample faculty members."""
     parser = FacultyParser()
     rows = parser.parse(_read_csv("faculties.csv"))
 
     count = 0
     for row in rows:
-        existing = db.query(Faculty).get(row["faculty_code"])
+        existing = db.query(Faculty).filter(
+            Faculty.faculty_code == row["faculty_code"],
+            Faculty.user_id == user_id,
+        ).first()
         if existing:
             continue
 
         db.add(Faculty(
+            user_id=user_id,
             faculty_code=row["faculty_code"],
             faculty_name=row["faculty_name"],
             faculty_email=row["faculty_email"],
@@ -137,18 +147,22 @@ def seed_faculty(db) -> int:
     return count
 
 
-def seed_classrooms(db) -> int:
+def seed_classrooms(db, user_id: int) -> int:
     """Parse and insert sample classrooms."""
     parser = ClassroomParser()
     rows = parser.parse(_read_csv("classrooms.csv"))
 
     count = 0
     for row in rows:
-        existing = db.query(Classroom).get(row["classroom_name"])
+        existing = db.query(Classroom).filter(
+            Classroom.classroom_name == row["classroom_name"],
+            Classroom.user_id == user_id,
+        ).first()
         if existing:
             continue
 
         db.add(Classroom(
+            user_id=user_id,
             classroom_name=row["classroom_name"],
             capacity=row["capacity"],
         ))
@@ -158,14 +172,17 @@ def seed_classrooms(db) -> int:
     return count
 
 
-def seed_slots(db) -> int:
+def seed_slots(db, user_id: int) -> int:
     """Parse and insert sample time slots."""
     parser = SlotParser()
     rows = parser.parse(_read_csv("slots.csv"))
 
     count = 0
     for row in rows:
-        existing = db.query(Slot).get(row["slot_id"])
+        existing = db.query(Slot).filter(
+            Slot.slot_id == row["slot_id"],
+            Slot.user_id == user_id,
+        ).first()
         if existing:
             continue
 
@@ -173,6 +190,7 @@ def seed_slots(db) -> int:
         end_parts = row["end_time"].split(":")
 
         db.add(Slot(
+            user_id=user_id,
             slot_id=row["slot_id"],
             day_of_week=row["day_of_week"],
             start_time=dt_time(int(start_parts[0]), int(start_parts[1])),
@@ -185,10 +203,12 @@ def seed_slots(db) -> int:
     return count
 
 
-def seed_batch_courses(db) -> int:
+def seed_batch_courses(db, user_id: int) -> int:
     """Parse and insert sample batch-course mappings."""
-    # Build known-entity sets for FK validation
-    known_course_codes = {c.course_code for c in db.query(Course).all()}
+    # Build known-entity sets for FK validation (user-scoped)
+    known_course_codes = {
+        c.course_code for c in db.query(Course).filter(Course.user_id == user_id).all()
+    }
     known_batches = [
         {
             "program": b.program,
@@ -196,7 +216,7 @@ def seed_batch_courses(db) -> int:
             "semester": b.semester,
             "section": b.section,
         }
-        for b in db.query(Batch).all()
+        for b in db.query(Batch).filter(Batch.user_id == user_id).all()
     ]
 
     parser = BatchCourseParser(known_course_codes, known_batches)
@@ -205,7 +225,8 @@ def seed_batch_courses(db) -> int:
     count = 0
     for row in rows:
         course = db.query(Course).filter(
-            Course.course_code == row["course_code"]
+            Course.course_code == row["course_code"],
+            Course.user_id == user_id,
         ).first()
 
         batch = db.query(Batch).filter(
@@ -213,29 +234,36 @@ def seed_batch_courses(db) -> int:
             Batch.branch == row["branch"],
             Batch.semester == row["semester"],
             Batch.section == row["section"],
+            Batch.user_id == user_id,
         ).first()
 
-        # Check for duplicates
+        # Check for duplicates (user-scoped)
         existing = db.query(BatchCourse).filter(
             BatchCourse.course_id == course.course_id,
             BatchCourse.batch_id == batch.batch_id,
+            BatchCourse.user_id == user_id,
         ).first()
         if existing:
             continue
 
-        # Resolve or create category
+        # Resolve or create category (user-scoped)
         category_id = None
         if row["category"]:
             cat = db.query(Category).filter(
-                Category.category_name == row["category"]
+                Category.category_name == row["category"],
+                Category.user_id == user_id,
             ).first()
             if not cat:
-                cat = Category(category_name=row["category"])
+                cat = Category(
+                    user_id=user_id,
+                    category_name=row["category"],
+                )
                 db.add(cat)
                 db.flush()
             category_id = cat.category_id
 
         db.add(BatchCourse(
+            user_id=user_id,
             course_id=course.course_id,
             batch_id=batch.batch_id,
             category_id=category_id,
@@ -247,10 +275,14 @@ def seed_batch_courses(db) -> int:
     return count
 
 
-def seed_faculty_courses(db) -> int:
+def seed_faculty_courses(db, user_id: int) -> int:
     """Parse and insert sample faculty-course mappings."""
-    known_faculty_codes = {f.faculty_code for f in db.query(Faculty).all()}
-    known_course_codes = {c.course_code for c in db.query(Course).all()}
+    known_faculty_codes = {
+        f.faculty_code for f in db.query(Faculty).filter(Faculty.user_id == user_id).all()
+    }
+    known_course_codes = {
+        c.course_code for c in db.query(Course).filter(Course.user_id == user_id).all()
+    }
 
     parser = FacultyCourseParser(known_faculty_codes, known_course_codes)
     rows = parser.parse(_read_csv("faculty_courses.csv"))
@@ -258,17 +290,20 @@ def seed_faculty_courses(db) -> int:
     count = 0
     for row in rows:
         course = db.query(Course).filter(
-            Course.course_code == row["course_code"]
+            Course.course_code == row["course_code"],
+            Course.user_id == user_id,
         ).first()
 
         existing = db.query(FacultyCourse).filter(
             FacultyCourse.course_id == course.course_id,
             FacultyCourse.faculty_code == row["faculty_code"],
+            FacultyCourse.user_id == user_id,
         ).first()
         if existing:
             continue
 
         db.add(FacultyCourse(
+            user_id=user_id,
             course_id=course.course_id,
             faculty_code=row["faculty_code"],
         ))
@@ -289,13 +324,24 @@ SEED_STEPS = [
 ]
 
 
-def seed_dataset(db) -> tuple[dict[str, int], int]:
-    """Seed the sample dataset and return per-step counts plus the total."""
+def seed_dataset(db, user_id: int = None) -> tuple[dict[str, int], int]:
+    """Seed the sample dataset and return per-step counts plus the total.
+    
+    If user_id is not provided, uses the first admin user in the database.
+    """
+    if user_id is None:
+        from backend.models.user import User
+        admin = db.query(User).filter(User.role == "admin").first()
+        if admin:
+            user_id = admin.user_id
+        else:
+            raise DataError("user", "No admin user found. Create an admin account first.")
+
     summary = {}
     total = 0
 
     for key, func in SEED_STEPS:
-        count = func(db)
+        count = func(db, user_id)
         summary[key] = count
         total += count
 

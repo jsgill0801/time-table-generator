@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.classroom import Classroom
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 
 
 classroom_bp = Blueprint("classrooms", __name__)
@@ -22,10 +22,11 @@ classroom_bp = Blueprint("classrooms", __name__)
 @classroom_bp.route("/", methods=["GET"])
 @login_required
 def list_classrooms():
-    """Return all classrooms ordered by name."""
+    """Return all classrooms ordered by name for the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        rooms = db.query(Classroom).order_by(Classroom.classroom_name).all()
+        rooms = db.query(Classroom).filter(Classroom.user_id == user_id).order_by(Classroom.classroom_name).all()
         return jsonify([r.to_dict() for r in rooms]), 200
     finally:
         db.close()
@@ -34,10 +35,14 @@ def list_classrooms():
 @classroom_bp.route("/<string:classroom_name>", methods=["GET"])
 @login_required
 def get_classroom(classroom_name):
-    """Return a single classroom by its name."""
+    """Return a single classroom by its name if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        room = db.query(Classroom).get(classroom_name.upper())
+        room = db.query(Classroom).filter(
+            Classroom.classroom_name == classroom_name.upper(),
+            Classroom.user_id == user_id
+        ).first()
         if not room:
             return jsonify({"error": "Classroom not found."}), 404
         return jsonify(room.to_dict()), 200
@@ -48,17 +53,22 @@ def get_classroom(classroom_name):
 @classroom_bp.route("/", methods=["POST"])
 @admin_required
 def create_classroom():
-    """Create a new classroom."""
+    """Create a new classroom for the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
         name = data["classroom_name"].strip().upper()
 
-        existing = db.query(Classroom).get(name)
+        existing = db.query(Classroom).filter(
+            Classroom.classroom_name == name,
+            Classroom.user_id == user_id
+        ).first()
         if existing:
             return jsonify({"error": "A classroom with this name already exists."}), 409
 
         room = Classroom(
+            user_id=user_id,
             classroom_name=name,
             capacity=int(data["capacity"]),
         )
@@ -77,11 +87,15 @@ def create_classroom():
 @classroom_bp.route("/<string:classroom_name>", methods=["PUT"])
 @admin_required
 def update_classroom(classroom_name):
-    """Update an existing classroom's capacity."""
+    """Update an existing classroom's capacity if it belongs to the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
-        room = db.query(Classroom).get(classroom_name.upper())
+        room = db.query(Classroom).filter(
+            Classroom.classroom_name == classroom_name.upper(),
+            Classroom.user_id == user_id
+        ).first()
         if not room:
             return jsonify({"error": "Classroom not found."}), 404
 
@@ -102,10 +116,14 @@ def update_classroom(classroom_name):
 @classroom_bp.route("/<string:classroom_name>", methods=["DELETE"])
 @admin_required
 def delete_classroom(classroom_name):
-    """Delete a classroom by its name."""
+    """Delete a classroom by its name if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        room = db.query(Classroom).get(classroom_name.upper())
+        room = db.query(Classroom).filter(
+            Classroom.classroom_name == classroom_name.upper(),
+            Classroom.user_id == user_id
+        ).first()
         if not room:
             return jsonify({"error": "Classroom not found."}), 404
 

@@ -19,6 +19,19 @@ auth_bp = Blueprint("auth", __name__)
 
 
 # -----------------------------------------------------------------
+#  Helper: get current user ID from session
+# -----------------------------------------------------------------
+
+def get_current_user_id():
+    """
+    Extract the current user ID from Flask session.
+    Should only be called after login_required decorator has verified auth.
+    Returns user_id or None if not authenticated.
+    """
+    return session.get("user_id")
+
+
+# -----------------------------------------------------------------
 #  Decorator: protect routes that require login
 # -----------------------------------------------------------------
 

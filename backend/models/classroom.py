@@ -4,7 +4,7 @@ Classroom model.
 Represents a physical room where classes can be held.
 """
 
-from sqlalchemy import Column, Integer, String, CheckConstraint
+from sqlalchemy import Column, Integer, String, CheckConstraint, ForeignKey
 
 from backend.db import Base
 
@@ -12,8 +12,8 @@ from backend.db import Base
 class Classroom(Base):
     __tablename__ = "classroom"
 
-    # Room name is the natural primary key (e.g. "LT-1", "CEP202")
     classroom_name = Column(String(10), primary_key=True)
+    user_id = Column(Integer, ForeignKey("app_user.user_id", ondelete="CASCADE"), nullable=True)
 
     # Maximum number of students the room can hold
     capacity = Column(Integer, nullable=False)

@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.db import get_db
 from backend.models.batch import Batch
-from backend.routes.auth_routes import login_required, admin_required
+from backend.routes.auth_routes import login_required, admin_required, get_current_user_id
 
 
 batch_bp = Blueprint("batches", __name__)
@@ -22,11 +22,13 @@ batch_bp = Blueprint("batches", __name__)
 @batch_bp.route("/", methods=["GET"])
 @login_required
 def list_batches():
-    """Return all batches ordered by program and semester."""
+    """Return all batches for the current user, ordered by program and semester."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
         batches = (
             db.query(Batch)
+            .filter(Batch.user_id == user_id)
             .order_by(Batch.program, Batch.semester, Batch.branch)
             .all()
         )
@@ -38,10 +40,14 @@ def list_batches():
 @batch_bp.route("/<int:batch_id>", methods=["GET"])
 @login_required
 def get_batch(batch_id):
-    """Return a single batch by its ID."""
+    """Return a single batch by its ID if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        batch = db.query(Batch).get(batch_id)
+        batch = db.query(Batch).filter(
+            Batch.batch_id == batch_id,
+            Batch.user_id == user_id
+        ).first()
         if not batch:
             return jsonify({"error": "Batch not found."}), 404
         return jsonify(batch.to_dict()), 200
@@ -52,11 +58,13 @@ def get_batch(batch_id):
 @batch_bp.route("/", methods=["POST"])
 @admin_required
 def create_batch():
-    """Create a new batch."""
+    """Create a new batch for the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
         batch = Batch(
+            user_id=user_id,
             program=data["program"].strip(),
             branch=data["branch"].strip(),
             semester=int(data["semester"]),
@@ -77,11 +85,15 @@ def create_batch():
 @batch_bp.route("/<int:batch_id>", methods=["PUT"])
 @admin_required
 def update_batch(batch_id):
-    """Update an existing batch."""
+    """Update an existing batch if it belongs to the current user."""
+    user_id = get_current_user_id()
     data = request.get_json()
     db = next(get_db())
     try:
-        batch = db.query(Batch).get(batch_id)
+        batch = db.query(Batch).filter(
+            Batch.batch_id == batch_id,
+            Batch.user_id == user_id
+        ).first()
         if not batch:
             return jsonify({"error": "Batch not found."}), 404
 
@@ -108,10 +120,14 @@ def update_batch(batch_id):
 @batch_bp.route("/<int:batch_id>", methods=["DELETE"])
 @admin_required
 def delete_batch(batch_id):
-    """Delete a batch by its ID."""
+    """Delete a batch by its ID if it belongs to the current user."""
+    user_id = get_current_user_id()
     db = next(get_db())
     try:
-        batch = db.query(Batch).get(batch_id)
+        batch = db.query(Batch).filter(
+            Batch.batch_id == batch_id,
+            Batch.user_id == user_id
+        ).first()
         if not batch:
             return jsonify({"error": "Batch not found."}), 404
 

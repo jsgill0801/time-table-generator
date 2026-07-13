@@ -20,6 +20,7 @@ class Timetable(Base):
     __tablename__ = "timetable"
 
     auto_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("app_user.user_id", ondelete="CASCADE"), nullable=True)
     generated_at = Column(DateTime, nullable=True)
 
     # ----- Foreign keys (normalized references) -----

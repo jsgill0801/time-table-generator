@@ -6,6 +6,8 @@ full integrity check across all loaded datasets. If any
 critical issue is found, generation is halted and a detailed
 report of every problem is returned.
 
+All queries are filtered by user_id to ensure data isolation.
+
 This catches issues like:
     - Courses with no assigned faculty
     - Rooms too small for any batch's enrollment
@@ -34,8 +36,10 @@ class ValidationService:
     Runs a series of integrity checks on the data before
     the timetable generation engine is allowed to start.
 
+    All queries are scoped to a specific user_id for data isolation.
+
     Usage:
-        validator = ValidationService(db_session)
+        validator = ValidationService(db_session, user_id=current_user_id)
         errors = validator.run_all_checks()
 
         if errors:
@@ -43,8 +47,15 @@ class ValidationService:
             raise ValidationError(errors)
     """
 
-    def __init__(self, db_session: Session):
+    def __init__(self, db_session: Session, user_id: int = None):
         self.session = db_session
+        self.user_id = user_id
+
+    def _user_filter(self, model):
+        """Return a filter clause for the current user, or no filter if user_id is None."""
+        if self.user_id is not None:
+            return model.user_id == self.user_id
+        return True
 
     def run_all_checks(self) -> list[str]:
         """
@@ -78,11 +89,11 @@ class ValidationService:
         errors = []
 
         # Get all course IDs that have a batch-course mapping
-        batch_courses = self.session.query(BatchCourse).all()
+        batch_courses = self.session.query(BatchCourse).filter(self._user_filter(BatchCourse)).all()
         assigned_course_ids = {bc.course_id for bc in batch_courses}
 
         # Get all course IDs that have a faculty-course mapping
-        faculty_courses = self.session.query(FacultyCourse).all()
+        faculty_courses = self.session.query(FacultyCourse).filter(self._user_filter(FacultyCourse)).all()
         faculty_assigned_ids = {fc.course_id for fc in faculty_courses}
 
         # Find courses that are assigned to batches but have no faculty
@@ -114,10 +125,11 @@ class ValidationService:
         """
         errors = []
 
-        # Find the largest available room
+        # Find the largest available room for this user
         max_room = (
             self.session
             .query(Classroom)
+            .filter(self._user_filter(Classroom))
             .order_by(Classroom.capacity.desc())
             .first()
         )
@@ -129,13 +141,16 @@ class ValidationService:
         max_capacity = max_room.capacity
 
         # Check each batch-course enrollment against the max room
-        batch_courses = (
+        query = (
             self.session
             .query(BatchCourse, Course, Batch)
             .join(Course, BatchCourse.course_id == Course.course_id)
             .join(Batch, BatchCourse.batch_id == Batch.batch_id)
-            .all()
         )
+        if self.user_id is not None:
+            query = query.filter(BatchCourse.user_id == self.user_id)
+
+        batch_courses = query.all()
 
         for bc, course, batch in batch_courses:
             if bc.students_enrolled > max_capacity:
@@ -162,10 +177,11 @@ class ValidationService:
         """
         errors = []
 
-        # Count total available slots (excluding Free-Slots)
+        # Count total available slots (excluding Free-Slots) for this user
         total_slots = (
             self.session
             .query(Slot)
+            .filter(self._user_filter(Slot))
             .filter(Slot.slot_name != "Free-Slot")
             .count()
         )
@@ -174,8 +190,8 @@ class ValidationService:
             errors.append("No time slots found. Please add at least one slot.")
             return errors
 
-        # Count total rooms
-        total_rooms = self.session.query(Classroom).count()
+        # Count total rooms for this user
+        total_rooms = self.session.query(Classroom).filter(self._user_filter(Classroom)).count()
 
         if total_rooms == 0:
             errors.append("No classrooms found. Please add at least one classroom.")
@@ -184,13 +200,16 @@ class ValidationService:
         # Total capacity = slots × rooms (each slot-room pair holds one session)
         total_capacity = total_slots * total_rooms
 
-        # Count total lecture demand across all batch-courses
-        batch_courses = (
+        # Count total lecture demand across all batch-courses for this user
+        query = (
             self.session
             .query(BatchCourse, Course)
             .join(Course, BatchCourse.course_id == Course.course_id)
-            .all()
         )
+        if self.user_id is not None:
+            query = query.filter(BatchCourse.user_id == self.user_id)
+
+        batch_courses = query.all()
 
         total_demand = sum(
             calculate_required_sessions(
@@ -225,13 +244,16 @@ class ValidationService:
         errors = []
 
         # For each faculty, sum up the lectures from all their assigned courses
-        faculty_courses = (
+        query = (
             self.session
             .query(FacultyCourse, Course, Faculty)
             .join(Course, FacultyCourse.course_id == Course.course_id)
             .join(Faculty, FacultyCourse.faculty_code == Faculty.faculty_code)
-            .all()
         )
+        if self.user_id is not None:
+            query = query.filter(FacultyCourse.user_id == self.user_id)
+
+        faculty_courses = query.all()
 
         # Aggregate lectures per faculty
         faculty_load = defaultdict(lambda: {"name": "", "max": 0, "assigned": 0})
@@ -242,12 +264,15 @@ class ValidationService:
             entry["max"] = faculty.max_load
 
             # Count how many batches have this course (each batch = separate lectures)
-            batch_count = (
+            bc_query = (
                 self.session
                 .query(BatchCourse)
                 .filter(BatchCourse.course_id == course.course_id)
-                .count()
             )
+            if self.user_id is not None:
+                bc_query = bc_query.filter(BatchCourse.user_id == self.user_id)
+
+            batch_count = bc_query.count()
 
             entry["assigned"] += (
                 calculate_required_sessions(
@@ -278,19 +303,19 @@ class ValidationService:
         """
         errors = []
 
-        if self.session.query(BatchCourse).count() == 0:
+        if self.session.query(BatchCourse).filter(self._user_filter(BatchCourse)).count() == 0:
             errors.append(
                 "No batch-course mappings found. "
                 "Please assign courses to batches before generating."
             )
 
-        if self.session.query(Slot).count() == 0:
+        if self.session.query(Slot).filter(self._user_filter(Slot)).count() == 0:
             errors.append(
                 "No time slots found. "
                 "Please define the weekly slot grid before generating."
             )
 
-        if self.session.query(Classroom).count() == 0:
+        if self.session.query(Classroom).filter(self._user_filter(Classroom)).count() == 0:
             errors.append(
                 "No classrooms found. "
                 "Please add classroom data before generating."
@@ -313,7 +338,7 @@ class ValidationService:
         """
         errors = []
 
-        slots = self.session.query(Slot).all()
+        slots = self.session.query(Slot).filter(self._user_filter(Slot)).all()
 
         # Group slots by day
         day_slots = defaultdict(list)
@@ -352,10 +377,11 @@ class ValidationService:
         """
         errors = []
 
-        # Count non-free slots
+        # Count non-free slots for this user
         available_slots = (
             self.session
             .query(Slot)
+            .filter(self._user_filter(Slot))
             .filter(Slot.slot_name != "Free-Slot")
             .count()
         )
@@ -364,13 +390,16 @@ class ValidationService:
             return errors  # already caught by check 5
 
         # Calculate per-batch demand
-        batch_courses = (
+        query = (
             self.session
             .query(BatchCourse, Course, Batch)
             .join(Course, BatchCourse.course_id == Course.course_id)
             .join(Batch, BatchCourse.batch_id == Batch.batch_id)
-            .all()
         )
+        if self.user_id is not None:
+            query = query.filter(BatchCourse.user_id == self.user_id)
+
+        batch_courses = query.all()
 
         batch_demand = defaultdict(int)
         for bc, course, batch in batch_courses:
@@ -401,13 +430,16 @@ class ValidationService:
         """
         errors = []
 
-        batch_courses = (
+        query = (
             self.session
             .query(BatchCourse, Course, Batch)
             .join(Course, BatchCourse.course_id == Course.course_id)
             .join(Batch, BatchCourse.batch_id == Batch.batch_id)
-            .all()
         )
+        if self.user_id is not None:
+            query = query.filter(BatchCourse.user_id == self.user_id)
+
+        batch_courses = query.all()
 
         seen = set()
         for bc, course, batch in batch_courses:

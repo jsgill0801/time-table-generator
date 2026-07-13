@@ -6,7 +6,7 @@ could not place. Each row records which course/batch/faculty
 could not be scheduled and why.
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.sql import func
 
 from backend.db import Base
@@ -16,6 +16,7 @@ class ConflictReport(Base):
     __tablename__ = "conflict_report"
 
     conflict_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("app_user.user_id", ondelete="CASCADE"), nullable=True)
 
     course_code = Column(String(10), nullable=False)
     course_name = Column(String(100), nullable=False)
