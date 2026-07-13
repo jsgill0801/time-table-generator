@@ -8,18 +8,18 @@
   ],
   "routes": [
     { "src": "/static/(.*)", "dest": "/frontend/static/$1" },
-    { "src": "/", "dest": "/frontend/templates/login.html" },
-    { "src": "/login", "dest": "/frontend/templates/login.html" },
-    { "src": "/signup", "dest": "/frontend/templates/signup.html" },
-    { "src": "/dashboard", "dest": "/frontend/templates/dashboard.html" },
-    { "src": "/courses", "dest": "/frontend/templates/courses.html" },
-    { "src": "/batches", "dest": "/frontend/templates/batches.html" },
-    { "src": "/faculties", "dest": "/frontend/templates/faculties.html" },
-    { "src": "/classrooms", "dest": "/frontend/templates/classrooms.html" },
-    { "src": "/slots", "dest": "/frontend/templates/slots.html" },
-    { "src": "/categories", "dest": "/frontend/templates/categories.html" },
-    { "src": "/mappings", "dest": "/frontend/templates/mappings.html" },
-    { "src": "/timetable", "dest": "/frontend/templates/timetable.html" },
-    { "src": "/users", "dest": "/frontend/templates/users.html" }
+    { "src": "/", "dest": "/frontend/login.html" },
+    { "src": "/login", "dest": "/frontend/login.html" },
+    { "src": "/signup", "dest": "/frontend/signup.html" },
+    { "src": "/dashboard", "dest": "/frontend/dashboard.html" },
+    { "src": "/courses", "dest": "/frontend/courses.html" },
+    { "src": "/batches", "dest": "/frontend/batches.html" },
+    { "src": "/faculties", "dest": "/frontend/faculty.html" },
+    { "src": "/classrooms", "dest": "/frontend/rooms.html" },
+    { "src": "/slots", "dest": "/frontend/slots.html" },
+    { "src": "/categories", "dest": "/frontend/categories.html" },
+    { "src": "/mappings", "dest": "/frontend/mappings.html" },
+    { "src": "/timetable", "dest": "/frontend/timetable.html" },
+    { "src": "/users", "dest": "/frontend/users.html" }
   ]
 }

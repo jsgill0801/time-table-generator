@@ -13,7 +13,7 @@ _frontend_dir = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "frontend",
 )
-_template_dir = os.path.join(_frontend_dir, "templates")
+_template_dir = _frontend_dir
 _static_dir = os.path.join(_frontend_dir, "static")
 
 frontend_bp = Blueprint("frontend", __name__)
