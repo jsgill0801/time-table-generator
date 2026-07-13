@@ -133,6 +133,18 @@ def delete_faculty(faculty_code):
         if not faculty:
             return jsonify({"error": "Faculty not found."}), 404
 
+        # Delete dependent timetable and faculty course mapping records
+        from backend.models.faculty_course import FacultyCourse
+        from backend.models.timetable import Timetable
+
+        db.query(Timetable).filter(
+            Timetable.faculty_code == faculty_code.upper()
+        ).delete(synchronize_session=False)
+
+        db.query(FacultyCourse).filter(
+            FacultyCourse.faculty_code == faculty_code.upper()
+        ).delete(synchronize_session=False)
+
         db.delete(faculty)
         db.commit()
         return jsonify({"message": "Faculty deleted."}), 200

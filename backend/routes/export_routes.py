@@ -34,22 +34,7 @@ export_bp = Blueprint("export", __name__)
 
 
 def _debug_log(hypothesis_id: str, location: str, message: str, data: dict):
-    # region agent log
-    try:
-        payload = {
-            "sessionId": "ecec21",
-            "runId": f"export_route_{int(datetime.now().timestamp() * 1000)}",
-            "hypothesisId": hypothesis_id,
-            "location": location,
-            "message": message,
-            "data": data,
-            "timestamp": int(datetime.now().timestamp() * 1000),
-        }
-        with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-    except Exception:
-        pass
-    # endregion
+    pass
 
 
 def _build_export_service(db, user_id):
@@ -224,7 +209,7 @@ def preview_timetable():
         return jsonify({
             "message": f"Grid preview for {len(grid)} batch(es).",
             "generated_at": max(
-                (r.generated_at.isoformat() for r in rows if r.generated_at),
+                (r.generated_at.isoformat() + "Z" for r in rows if r.generated_at),
                 default=None,
             ),
             "batches": sorted(grid.keys()),

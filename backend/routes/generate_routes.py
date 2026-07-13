@@ -64,20 +64,7 @@ def generate_timetable():
     try:
         run_started = datetime.utcnow()
         run_id = f"generate_{int(run_started.timestamp() * 1000)}"
-        try:
-            payload = {
-                "sessionId": "ecec21",
-                "runId": run_id,
-                "hypothesisId": "H12",
-                "location": "generate_routes.py:generate_timetable",
-                "message": "Entered generate_timetable route",
-                "data": {"user_id": user_id},
-                "timestamp": int(datetime.utcnow().timestamp() * 1000),
-            }
-            with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-                f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-        except Exception:
-            pass
+        pass
 
         # Step 1: Run validation checks (user-scoped)
         validator = ValidationService(db, user_id=user_id)
@@ -110,44 +97,7 @@ def generate_timetable():
         scheduler = Scheduler(scheduling_input)
         result = scheduler.run()
 
-        # region agent log
-        try:
-            required_counter = Counter(
-                (d["course_code"], d["batch_label"]) for d in demand for _ in range(d["lectures_required"])
-            )
-            placed_counter = Counter(
-                (a["course_code"], a["batch_label"]) for a in result["assignments"]
-            )
-            deficits = []
-            for key, required in required_counter.items():
-                placed = placed_counter.get(key, 0)
-                if placed < required:
-                    deficits.append({
-                        "course_code": key[0],
-                        "batch_label": key[1],
-                        "required": required,
-                        "placed": placed,
-                    })
-            payload = {
-                "sessionId": "ecec21",
-                "runId": run_id,
-                "hypothesisId": "H9",
-                "location": "generate_routes.py:generate_timetable",
-                "message": "Post-scheduler demand coverage",
-                "data": {
-                    "required_total": sum(required_counter.values()),
-                    "placed_total": len(result["assignments"]),
-                    "conflicts_total": len(result["conflicts"]),
-                    "deficits": deficits[:25],
-                    "conflict_reasons": [c.get("reason", "") for c in result["conflicts"][:25]],
-                },
-                "timestamp": int(datetime.utcnow().timestamp() * 1000),
-            }
-            with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-                f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-        except Exception:
-            pass
-        # endregion
+        pass
 
         # Step 5: Run the soft-constraint optimizer on placed assignments
         if result["assignments"]:
@@ -159,82 +109,7 @@ def generate_timetable():
             )
             result["assignments"] = optimiser.run()
 
-        # region agent log
-        try:
-            required_by_bc = {d["batch_course_id"]: int(d["lectures_required"]) for d in demand}
-            placed_by_bc = Counter(a["batch_course_id"] for a in result["assignments"])
-            overscheduled = []
-            underscheduled = []
-            for bc_id, required in required_by_bc.items():
-                placed = int(placed_by_bc.get(bc_id, 0))
-                if placed > required:
-                    overscheduled.append({"batch_course_id": bc_id, "required": required, "placed": placed})
-                elif placed < required:
-                    underscheduled.append({"batch_course_id": bc_id, "required": required, "placed": placed})
-
-            faculty_slot = Counter()
-            batch_slot = Counter()
-            room_slot = Counter()
-            faculty_day_positions = defaultdict(lambda: defaultdict(set))
-            slot_pos = {}
-            for day, slot_ids in scheduling_input["slot_day_index"].items():
-                for idx, slot_id in enumerate(slot_ids):
-                    slot_pos[slot_id] = (day, idx)
-
-            for a in result["assignments"]:
-                sid = a["slot_id"]
-                if a.get("faculty_code"):
-                    faculty_slot[(a["faculty_code"], sid)] += 1
-                batch_slot[(a["batch_label"], sid)] += 1
-                room_slot[(a["classroom_name"], sid)] += 1
-                if a.get("faculty_code") and sid in slot_pos:
-                    d, p = slot_pos[sid]
-                    faculty_day_positions[a["faculty_code"]][d].add(p)
-
-            faculty_slot_violations = sum(v - 1 for v in faculty_slot.values() if v > 1)
-            batch_slot_violations = sum(v - 1 for v in batch_slot.values() if v > 1)
-            room_slot_violations = sum(v - 1 for v in room_slot.values() if v > 1)
-
-            consecutive_violations = 0
-            for faculty_code, day_map in faculty_day_positions.items():
-                for day, pos_set in day_map.items():
-                    for p in pos_set:
-                        if (p + 1) in pos_set:
-                            consecutive_violations += 1
-
-            demand_students = {d["batch_course_id"]: int(d.get("students_enrolled") or 0) for d in demand}
-            room_capacity = scheduling_input["room_index"]
-            room_capacity_violations = 0
-            for a in result["assignments"]:
-                students = demand_students.get(a["batch_course_id"], 0)
-                cap = int(room_capacity.get(a["classroom_name"], 0))
-                if cap < students:
-                    room_capacity_violations += 1
-
-            payload = {
-                "sessionId": "ecec21",
-                "runId": run_id,
-                "hypothesisId": "H10",
-                "location": "generate_routes.py:generate_timetable",
-                "message": "Post-optimiser hard-constraint audit",
-                "data": {
-                    "overscheduled_count": len(overscheduled),
-                    "underscheduled_count": len(underscheduled),
-                    "overscheduled": overscheduled[:25],
-                    "underscheduled": underscheduled[:25],
-                    "faculty_slot_violations": faculty_slot_violations,
-                    "batch_slot_violations": batch_slot_violations,
-                    "room_slot_violations": room_slot_violations,
-                    "consecutive_violations": consecutive_violations,
-                    "room_capacity_violations": room_capacity_violations,
-                },
-                "timestamp": int(datetime.utcnow().timestamp() * 1000),
-            }
-            with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-                f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-        except Exception:
-            pass
-        # endregion
+        pass
 
         # Step 6: Save assignments to the timetable table (with user_id)
         for a in result["assignments"]:

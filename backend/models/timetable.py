@@ -86,7 +86,7 @@ class Timetable(Base):
     def to_dict(self):
         return {
             "auto_id": self.auto_id,
-            "generated_at": self.generated_at.isoformat() if self.generated_at else None,
+            "generated_at": (self.generated_at.isoformat() + "Z") if self.generated_at else None,
             "batch_course_id": self.batch_course_id,
             "faculty_code": self.faculty_code,
             "classroom_name": self.classroom_name,

@@ -75,6 +75,10 @@ class Scheduler:
         # { faculty_code: { day_of_week: set(time_position_index) } }
         self.faculty_day_positions = defaultdict(lambda: defaultdict(set))
 
+        # Track which days of the week each course has been scheduled on
+        # { batch_course_id: set(day_of_week, ...) }
+        self.course_days = defaultdict(set)
+
         # Build time-position index for consecutive-slot detection
         # Maps slot_id -> (day_of_week, position_in_day)
         self.slot_position = {}
@@ -90,6 +94,10 @@ class Scheduler:
             "debug-ecec21.log",
         )
         self._run_id = f"scheduler_{int(datetime.now().timestamp() * 1000)}"
+
+        # Generate a random priority for each slot to distribute them randomly across slots of the same day
+        import random
+        self.slot_random_priority = {sid: random.random() for sid in self.all_slot_ids}
 
     def run(self) -> dict:
         """
@@ -119,27 +127,7 @@ class Scheduler:
                 else:
                     placed_for_entry += 1
 
-            # region agent log
-            try:
-                payload = {
-                    "sessionId": "ecec21",
-                    "runId": self._run_id,
-                    "hypothesisId": "H8",
-                    "location": "scheduler.py:run",
-                    "message": "Course demand placement summary",
-                    "data": {
-                        "course_code": entry["course_code"],
-                        "batch_label": entry["batch_label"],
-                        "required": lectures_needed,
-                        "placed": placed_for_entry,
-                    },
-                    "timestamp": int(datetime.now().timestamp() * 1000),
-                }
-                with open(self._debug_log_path, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-            except Exception:
-                pass
-            # endregion
+            pass
 
         return {
             "assignments": self.assignments,
@@ -155,7 +143,7 @@ class Scheduler:
         """
         Try to find a valid (slot, room) pair for one lecture session.
 
-        Iterates through all slots, then all rooms within each slot,
+        Iterates through all slots, sorted dynamically to spread lectures evenly across the week,
         and picks the first combination that passes all constraints.
 
         Returns True if placed successfully, False otherwise.
@@ -164,7 +152,26 @@ class Scheduler:
         batch_label = entry["batch_label"]
         students = entry["students_enrolled"]
 
-        for slot_id in self.all_slot_ids:
+        # Calculate current daily load to spread lectures evenly
+        global_day_counts = defaultdict(int)
+        batch_day_counts = defaultdict(int)
+        for a in self.assignments:
+            global_day_counts[a["day_of_week"]] += 1
+            if a["batch_label"] == batch_label:
+                batch_day_counts[a["day_of_week"]] += 1
+
+        # Sort slots dynamically: prioritize days with fewer assignments for this batch,
+        # then globally less busy days, and finally randomize within the same day.
+        sorted_slots = sorted(
+            self.all_slot_ids,
+            key=lambda sid: (
+                batch_day_counts[self.slot_lookup[sid]["day_of_week"]],
+                global_day_counts[self.slot_lookup[sid]["day_of_week"]],
+                self.slot_random_priority[sid]
+            )
+        )
+
+        for slot_id in sorted_slots:
             slot_info = self.slot_lookup.get(slot_id)
             if not slot_info:
                 continue
@@ -183,6 +190,11 @@ class Scheduler:
 
             # Check consecutive-slot constraint for faculty
             if not self._check_no_consecutive(faculty_code, slot_id):
+                continue
+
+            # Check if this course already has a lecture scheduled on this day
+            day_of_week = slot_info["day_of_week"]
+            if day_of_week in self.course_days[entry["batch_course_id"]]:
                 continue
 
             # Try each room (they are sorted largest-first in room_index)
@@ -289,6 +301,7 @@ class Scheduler:
 
         self.batch_slots[batch_label].add(slot_id)
         self.room_slots[room_name].add(slot_id)
+        self.course_days[entry["batch_course_id"]].add(slot_info["day_of_week"])
 
     def _diagnose_failure(self, entry: dict) -> str:
         """

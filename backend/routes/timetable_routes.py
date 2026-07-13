@@ -207,7 +207,7 @@ def get_timetable_summary():
             "unique_faculties": len(faculties),
             "unique_rooms": len(rooms),
             "generated_at": max(
-                (r.generated_at.isoformat() for r in rows if r.generated_at),
+                (r.generated_at.isoformat() + "Z" for r in rows if r.generated_at),
                 default=None,
             ),
             "days_used": sorted(days_used, key=lambda d: DAY_ORDER.get(d, 99)),

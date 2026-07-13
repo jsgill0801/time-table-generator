@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users | Timetable Generator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="app-page" data-page="users" data-resource-page="users">
+    <div class="app-shell">
+        <aside class="app-sidebar" data-sidebar></aside>
+
+        <main class="app-main">
+            <header class="page-header">
+                <div>
+                    <h1>User Management</h1>
+                    <p class="page-intro">Manage credentials, view registered users, and create or delete admin accounts.</p>
+                </div>
+                <div class="page-chip">Master Admin</div>
+            </header>
+
+            <section class="panel-grid">
+                <article class="content-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>User Accounts</h2>
+                            <p class="panel-subtext">Registered administrators and users.</p>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead data-resource-head></thead>
+                            <tbody data-resource-body></tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state is-hidden" id="resourceEmptyState">
+                        <p>No user accounts found.</p>
+                    </div>
+                </article>
+
+                <aside class="content-panel">
+                    <div class="import-panel" style="padding: 1.5rem;">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Add User / Admin</h2>
+                                <p class="panel-subtext">Create a new user or administrator account by verifying the Master Admin password.</p>
+                             </div>
+                        </div>
+                        <div style="margin-top: 1.5rem;">
+                            <p style="margin-bottom: 1.25rem; font-size: 0.9rem; line-height: 1.5; color: var(--text-muted);">
+                                Click the button below to open the registration form. You will need to enter the Master Admin password to complete the registration.
+                            </p>
+                            <a href="/signup" class="btn-primary" style="display: inline-block; text-align: center; text-decoration: none; width: 100%; box-sizing: border-box;">
+                                Create User Account
+                            </a>
+                        </div>
+                    </div>
+                </aside>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/api.js" defer></script>
+    <script src="/static/script.js" defer></script>
+</body>
+</html>

@@ -35,8 +35,8 @@ class Course(Base):
     )
 
     # Relationships (back-populated by BatchCourse and FacultyCourse)
-    batch_courses = relationship("BatchCourse", back_populates="course")
-    faculty_courses = relationship("FacultyCourse", back_populates="course")
+    batch_courses = relationship("BatchCourse", back_populates="course", cascade="all, delete-orphan")
+    faculty_courses = relationship("FacultyCourse", back_populates="course", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Course {self.course_code}: {self.course_name}>"

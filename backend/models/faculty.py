@@ -27,7 +27,7 @@ class Faculty(Base):
     )
 
     # Relationships
-    faculty_courses = relationship("FacultyCourse", back_populates="faculty")
+    faculty_courses = relationship("FacultyCourse", back_populates="faculty", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Faculty {self.faculty_code}: {self.faculty_name}>"

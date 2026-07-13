@@ -99,3 +99,9 @@ def timetable_page():
 @frontend_bp.route("/result.html")
 def result_page():
     return send_from_directory(_template_dir, "result.html")
+
+
+@frontend_bp.route("/users")
+@frontend_bp.route("/users.html")
+def users_page():
+    return send_from_directory(_template_dir, "users.html")

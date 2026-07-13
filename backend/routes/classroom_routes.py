@@ -127,6 +127,12 @@ def delete_classroom(classroom_name):
         if not room:
             return jsonify({"error": "Classroom not found."}), 404
 
+        # Delete dependent timetable records
+        from backend.models.timetable import Timetable
+        db.query(Timetable).filter(
+            Timetable.classroom_name == classroom_name.upper()
+        ).delete(synchronize_session=False)
+
         db.delete(room)
         db.commit()
         return jsonify({"message": "Classroom deleted."}), 200

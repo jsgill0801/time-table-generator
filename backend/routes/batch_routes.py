@@ -131,6 +131,18 @@ def delete_batch(batch_id):
         if not batch:
             return jsonify({"error": "Batch not found."}), 404
 
+        # Delete dependent timetable and batch course mapping records
+        from backend.models.batch_course import BatchCourse
+        from backend.models.timetable import Timetable
+
+        db.query(Timetable).filter(
+            Timetable.batch_course_id.in_(
+                db.query(BatchCourse.auto_id).filter(BatchCourse.batch_id == batch_id)
+            )
+        ).delete(synchronize_session=False)
+
+        db.query(BatchCourse).filter(BatchCourse.batch_id == batch_id).delete(synchronize_session=False)
+
         db.delete(batch)
         db.commit()
         return jsonify({"message": "Batch deleted."}), 200

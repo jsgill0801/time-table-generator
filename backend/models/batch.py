@@ -31,7 +31,7 @@ class Batch(Base):
     )
 
     # Relationships
-    batch_courses = relationship("BatchCourse", back_populates="batch")
+    batch_courses = relationship("BatchCourse", back_populates="batch", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Batch {self.label}>"

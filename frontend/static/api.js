@@ -31,9 +31,11 @@ const API = (function () {
     return {
         // Auth
         login: (u, p) => req("POST", "/auth/login", { username: u, password: p }),
-        signup: (u, e, p) => req("POST", "/auth/signup", { username: u, email: e, password: p }),
+        signup: (u, e, p, m) => req("POST", "/auth/signup", { username: u, email: e, password: p, masterAdminPassword: m }),
         logout: () => req("POST", "/auth/logout"),
         me: () => req("GET", "/auth/me"),
+        listUsers: () => req("GET", "/auth/users"),
+        deleteUser: id => req("DELETE", "/auth/users/" + id),
 
         // CRUD — courses
         listCourses: () => req("GET", "/courses/"),

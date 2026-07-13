@@ -107,6 +107,18 @@ def delete_category(category_id):
         if not category:
             return jsonify({"error": "Category not found."}), 404
 
+        # Delete dependent timetable and batch course mapping records
+        from backend.models.batch_course import BatchCourse
+        from backend.models.timetable import Timetable
+
+        db.query(Timetable).filter(
+            Timetable.batch_course_id.in_(
+                db.query(BatchCourse.auto_id).filter(BatchCourse.category_id == category_id)
+            )
+        ).delete(synchronize_session=False)
+
+        db.query(BatchCourse).filter(BatchCourse.category_id == category_id).delete(synchronize_session=False)
+
         db.delete(category)
         db.commit()
         return jsonify({"message": "Category deleted."}), 200

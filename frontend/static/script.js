@@ -205,6 +205,7 @@
         renderResourcePage();
         setupTimetablePage();
         setupCSVImportForms();
+        await setupUsersPage();
     });
 
     function isAuthPage() {
@@ -294,6 +295,7 @@
         if (isAuthPage()) return;
 
         await loadCurrentUser();
+        buildSidebar();
         await ensureAdminDemoData();
 
         try {
@@ -421,7 +423,11 @@
         }
 
         const activePage = document.body.dataset.page || "";
-        const navMarkup = SIDEBAR_ITEMS.map(function (item) {
+        const items = SIDEBAR_ITEMS.slice();
+        if (currentUser && currentUser.username === "admin") {
+            items.push({ id: "users", label: "Users", href: "/users" });
+        }
+        const navMarkup = items.map(function (item) {
             const isActive = item.id === activePage;
             return (
                 '<a class="sidebar-link' +
@@ -520,8 +526,15 @@
         const username = document.getElementById("signupUsername").value.trim();
         const email = document.getElementById("signupEmail").value.trim();
         const password = document.getElementById("signupPassword").value;
+        const masterAdminPassword = document.getElementById("signupMasterAdminPassword").value;
 
         setError(errorBox, "");
+
+        if (!/^[a-zA-Z0-9]+$/.test(username)) {
+            setError(errorBox, "Username must contain alphanumeric characters only (no spaces or special characters).");
+            return;
+        }
+
         setButtonBusy(submitButton, true, "Creating account...");
 
         try {
@@ -534,7 +547,8 @@
                 body: JSON.stringify({
                     username: username,
                     email: email,
-                    password: password
+                    password: password,
+                    masterAdminPassword: masterAdminPassword
                 })
             });
 
@@ -1683,6 +1697,7 @@
     function validateResourceForm(schema, values) {
         const errors = {};
 
+        // 1. Required fields validation
         schema.fields.forEach(function (field) {
             const value = values[field.key];
             const isEmpty = Array.isArray(value) ? value.length === 0 : !String(value || "").trim();
@@ -1692,18 +1707,80 @@
             }
         });
 
-        schema.fields
-            .filter(function (field) {
-                return field.numeric || (schema.id === "courses" && COURSE_NUMERIC_FIELD_KEYS.includes(field.key));
-            })
-            .forEach(function (field) {
-                const value = values[field.key];
+        // Helper regex patterns
+        const lettersOnlyRegex = /^[a-zA-Z\s]+$/;
+        const alphanumericMinimalRegex = /^[a-zA-Z0-9\s-]+$/;
+        const codeRegex = /^[a-zA-Z0-9]+$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const integerRegex = /^[0-9]+$/;
+        const decimalRegex = /^[0-9]+(\.[0-9]+)?$/;
 
-                if (value && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
-                    errors[field.key] = field.label + " must be a number.";
+        // 2. Specific field type/regex validations
+        schema.fields.forEach(function (field) {
+            const value = String(values[field.key] || "").trim();
+            if (!value) return; // Skip validation if empty (handled by required check)
+
+            // A. Letters Only fields (names)
+            if (
+                field.key === "facultyName" ||
+                field.key === "name" ||
+                field.key === "categoryName" ||
+                field.key === "slotName"
+            ) {
+                if (!lettersOnlyRegex.test(value)) {
+                    errors[field.key] = field.label + " must contain letters only.";
                 }
-            });
+            }
 
+            // B. Email validation
+            else if (field.key === "facultyEmail") {
+                if (!emailRegex.test(value)) {
+                    errors[field.key] = "Please enter a valid email address.";
+                }
+            }
+
+            // C. Alphanumeric with minimal special characters (Course Code, Faculty Code, Section)
+            else if (field.key === "code" || field.key === "facultyCode" || field.key === "section") {
+                if (!codeRegex.test(value)) {
+                    errors[field.key] = field.label + " must be alphanumeric only (no spaces or special characters).";
+                }
+            }
+
+            // D. Alphanumeric with spaces and hyphens (Classroom Name, Program, Branch)
+            else if (
+                field.key === "classroomName" ||
+                field.key === "program" ||
+                field.key === "branch"
+            ) {
+                if (!alphanumericMinimalRegex.test(value)) {
+                    errors[field.key] = field.label + " must contain letters, numbers, spaces, or hyphens only.";
+                }
+            }
+
+            // E. Integer checks (Capacity, Semester, Students Enrolled)
+            else if (
+                field.key === "capacity" ||
+                field.key === "semester" ||
+                field.key === "studentsEnrolled"
+            ) {
+                if (!integerRegex.test(value)) {
+                    errors[field.key] = field.label + " must be a positive integer.";
+                }
+            }
+
+            // F. Decimal / General Numeric checks (Lectures, Tutorials, Labs, Credits, Max Load)
+            else if (
+                field.numeric ||
+                (schema.id === "courses" && COURSE_NUMERIC_FIELD_KEYS.includes(field.key)) ||
+                field.key === "maximumLoad"
+            ) {
+                if (!decimalRegex.test(value)) {
+                    errors[field.key] = field.label + " must be a valid number.";
+                }
+            }
+        });
+
+        // 3. Custom validations
         if (schema.id === "courses" && Array.isArray(values.batchCategories)) {
             const invalidSelection = values.batchCategories.find(function (item) {
                 return !item;
@@ -1714,8 +1791,9 @@
         }
 
         if (
-            schema.id === "courses"
-            && (!Number.isFinite(Number(values.studentsEnrolled)) || Number(values.studentsEnrolled) < 1)
+            schema.id === "courses" &&
+            errors.studentsEnrolled === undefined &&
+            (!Number.isFinite(Number(values.studentsEnrolled)) || Number(values.studentsEnrolled) < 1)
         ) {
             errors.studentsEnrolled = "Students Enrolled must be at least 1.";
         }
@@ -3444,12 +3522,14 @@
             return "Unavailable";
         }
 
-        return date.toLocaleString(undefined, {
+        return date.toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
             year: "numeric",
             month: "short",
             day: "numeric",
             hour: "numeric",
-            minute: "2-digit"
+            minute: "2-digit",
+            hour12: true
         });
     }
 
@@ -3633,5 +3713,94 @@
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;");
+    }
+
+    async function setupUsersPage() {
+        if (document.body.dataset.page !== "users") {
+            return;
+        }
+
+        const user = await loadCurrentUser();
+        if (!user || user.username !== "admin") {
+            window.location.href = "/dashboard";
+            return;
+        }
+
+        await loadAndRenderUsersList();
+    }
+
+    async function loadAndRenderUsersList() {
+        const tableBody = document.querySelector("[data-resource-body]");
+        const tableHead = document.querySelector("[data-resource-head]");
+        const emptyState = document.getElementById("resourceEmptyState");
+        const countValueEl = document.getElementById("usersCountValue");
+
+        if (!tableBody || !tableHead) return;
+
+        tableHead.innerHTML = `
+            <tr>
+                <th>User ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        `;
+
+        try {
+            const users = await API.listUsers();
+            
+            if (countValueEl) {
+                countValueEl.textContent = users.length;
+            }
+
+            if (!users || users.length === 0) {
+                tableBody.innerHTML = "";
+                if (emptyState) emptyState.classList.remove("is-hidden");
+                return;
+            }
+
+            if (emptyState) emptyState.classList.add("is-hidden");
+
+            tableBody.innerHTML = users.map(function (u) {
+                const isMaster = u.username === "admin";
+                const deleteBtn = isMaster
+                    ? `<span style="font-size: 0.8rem; padding: 0.25rem 0.5rem; background: var(--border); border-radius: 4px; color: var(--text-muted);">System</span>`
+                    : `<button class="btn-delete-user btn-danger" data-user-id="${u.user_id}" data-username="${u.username}" type="button" style="padding: 0.35rem 0.75rem; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Delete</button>`;
+                
+                return `
+                    <tr>
+                        <td>${u.user_id}</td>
+                        <td style="font-weight: 600;">${escapeHtml(u.username)}</td>
+                        <td>${escapeHtml(u.email)}</td>
+                        <td>${escapeHtml(u.created_at.split('.')[0])}</td>
+                        <td>${deleteBtn}</td>
+                    </tr>
+                `;
+            }).join("");
+
+            tableBody.querySelectorAll(".btn-delete-user").forEach(function (btn) {
+                btn.addEventListener("click", async function (e) {
+                    const userId = btn.dataset.userId;
+                    const username = btn.dataset.username;
+                    if (confirm(`Are you sure you want to delete user "${username}"?`)) {
+                        try {
+                            btn.disabled = true;
+                            btn.textContent = "Deleting...";
+                            await API.deleteUser(userId);
+                            await loadAndRenderUsersList();
+                        } catch (err) {
+                            alert(err.error || "Failed to delete user.");
+                            btn.disabled = false;
+                            btn.textContent = "Delete";
+                        }
+                    }
+                });
+            });
+
+        } catch (err) {
+            console.error("Failed to load users", err);
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Failed to load users: ${err.error || 'Server error'}</td></tr>`;
+        }
     }
 })();

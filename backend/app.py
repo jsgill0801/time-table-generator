@@ -23,13 +23,15 @@ _frontend_static = os.path.join(_project_root, "frontend", "static")
 def create_app(config_class=DevelopmentConfig):
     """
     Build and return a fully configured Flask application.
-
-    Args:
-        config_class: Configuration class to use (default: DevelopmentConfig).
-
-    Returns:
-        Configured Flask app instance.
     """
+    # Enforce PostgreSQL unless running in testing environment
+    if not getattr(config_class, "TESTING", False):
+        db_url = config_class.DATABASE_URL
+        if not db_url or not (db_url.startswith("postgresql://") or db_url.startswith("postgresql+psycopg://")):
+            raise RuntimeError(
+                "DATABASE_URL must be configured with a valid PostgreSQL connection string "
+                "(e.g., postgresql://user:password@localhost:5432/dbname). SQLite is not supported."
+            )
 
     app = Flask(__name__, static_folder=_frontend_static, static_url_path="/static")
     app.config.from_object(config_class)

@@ -160,6 +160,12 @@ def delete_slot(slot_id):
         if not slot:
             return jsonify({"error": "Slot not found."}), 404
 
+        # Delete dependent timetable records
+        from backend.models.timetable import Timetable
+        db.query(Timetable).filter(
+            Timetable.slot_id == slot_id
+        ).delete(synchronize_session=False)
+
         db.delete(slot)
         db.commit()
         return jsonify({"message": "Slot deleted."}), 200

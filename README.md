@@ -4,13 +4,19 @@ A full-stack web application for automated university timetable generation, buil
 
 ## Features
 
-- **Dashboard** — Overview of all configured resources with one-click timetable generation
-- **Resource Management** — CRUD interfaces for Courses, Faculty, Rooms, Batches, Categories, and Time Slots
-- **CSV Import** — Bulk data upload via CSV files for every resource type
-- **Timetable Generation** — Server-side constraint-based scheduling engine with conflict detection
-- **Excel Export** — Download generated timetables as multi-sheet `.xlsx` workbooks (overall, faculty-wise, room-wise, batch-wise)
-- **Authentication** — Session-based login/signup system
-- **Conflict Reporting** — Automatic detection and display of scheduling conflicts
+- **Dashboard** — Live stats counter and overview of all configured resources with one-click generation.
+- **Resource Management** — Strict CRUD interfaces for Courses, Faculty, Rooms, Batches, Categories, and Time Slots.
+- **CSV Import** — Seamless bulk data upload via CSV files for every resource type.
+- **Timetable Generation (Constraint-Based Scheduling Engine)**:
+  - **Dynamic Day-Spreading Load Balancer**: Distributes academic load uniformly across all days of the week, ensuring active sessions are balanced globally and no days (like Thursday or Friday) are left empty.
+  - **Intra-Day Randomization**: Randomly shuffles session allocation across the day's slots to prevent congestion, maintaining empty slots dynamically while preventing course/faculty clashes.
+  - **Hard Constraints Enforcement**: Prevents double-bookings for rooms, batches, and faculty members, ensures consecutive lecture slot safety, and respects room capacity constraints.
+- **Cascading Deletions** — Deep database cascade cleanup across all mapped entities (Courses, Batches, Categories, Classrooms, Slots, and Faculty) to guarantee zero orphan database constraints.
+- **Strict Input Validation** — Robust front-end regex validations guarding against malformed database entries (alphabets-only for names, valid formatting for emails, positive numbers, and strict codes).
+- **Timezone Integration** — Generates local execution records rendered explicitly using the browser's local timezone (IST).
+- **Excel Export** — Download generated timetables as multi-sheet `.xlsx` workbooks matching official formats (overall, faculty-wise, room-wise, batch-wise) generated via `openpyxl`.
+- **Authentication & Authorization** — Secure session-based login/signup authenticated via hash signing with admin privilege guardrails.
+- **Conflict Reporting** — Automatic diagnosis and reporting of scheduling bottlenecks and conflicts.
 
 ## Tech Stack
 
@@ -18,7 +24,7 @@ A full-stack web application for automated university timetable generation, buil
 |------------|-------------------------------------|
 | Backend    | Python 3.10+, Flask, SQLAlchemy     |
 | Frontend   | HTML5, CSS3 (Inter + Georgia fonts), Vanilla JS |
-| Database   | PostgreSQL (primary) / SQLite (fallback) |
+| Database   | PostgreSQL (Mandatory)              |
 | Export     | openpyxl (Excel generation)         |
 
 ## Quick Start
@@ -26,7 +32,7 @@ A full-stack web application for automated university timetable generation, buil
 ### Prerequisites
 
 - Python 3.10 or higher
-- PostgreSQL (optional — SQLite works out of the box)
+- PostgreSQL Server
 
 ### Setup
 
@@ -37,9 +43,9 @@ cd time-table-generator
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Configure environment (optional — defaults work with SQLite)
-#    Edit .env to set DATABASE_URL for PostgreSQL:
-#    DATABASE_URL=postgresql://user:password@localhost:5432/TTG-main
+# 3. Configure environment
+#    Edit .env to set your PostgreSQL connection string:
+#    DATABASE_URL=postgresql://user:password@localhost:5432/dbname
 
 # 4. Run the application
 python -m backend.app
@@ -47,15 +53,20 @@ python -m backend.app
 
 The application starts at **http://localhost:5000**
 
-### First-Time Setup
+### First-Time Setup & Testing
 
-1. Open http://localhost:5000 → you'll see the **Login** page
-2. Click **"Create one"** to register an admin account
-3. Log in with your credentials
-4. Use the sidebar to navigate between pages
-5. Import data via CSV or add entries manually using the **Add** button
-6. Click **Run** on the Dashboard to generate the timetable
-7. Go to **Timetable** page to download the Excel export
+1. **Start the Application**: Run `python -m backend.app` and open http://localhost:5000 in your browser.
+2. **Log In as Master Admin**: Log in directly with the default master admin credentials:
+   - **Username**: `admin`
+   - **Password**: `admin123`
+3. **Registering New Accounts**: To create a new user or administrator:
+   - Click **"Create one"** on the login page (or go to `/signup`).
+   - Fill in the username, email, and password.
+   - Enter the **Master Admin Password** (`admin123`) to authorize the account creation. All newly registered accounts are set up as administrators.
+4. **User Management**:
+   - Only the master admin (`admin`) can view and manage user accounts.
+   - When logged in as `admin`, click the **"Users"** tab in the sidebar to see all registered accounts and delete them if needed (except for the core `admin` account).
+5. **Generate Timetable**: Use the sidebar to navigate, import sample data via CSV (under each resource page) or add manually, then click **Run** on the Dashboard and export on the **Timetable** page.
 
 ## Project Structure
 
@@ -147,7 +158,7 @@ BTech,Computer Science,4,A
 
 | Variable       | Default                                | Description            |
 |----------------|----------------------------------------|------------------------|
-| `DATABASE_URL` | `sqlite:///timetable.db`               | Database connection    |
+| `DATABASE_URL` | `postgresql://user:password@localhost:5432/dbname` | PostgreSQL database connection string (Mandatory) |
 | `SECRET_KEY`   | *(auto-generated)*                     | Flask session signing  |
 | `FLASK_ENV`    | `development`                          | Flask environment mode |
 

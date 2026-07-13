@@ -33,6 +33,7 @@ WEIGHTS = {
     "day_spread": 2.0,
     "room_changes": 1.5,
     "category_slot_alignment": 1.5,
+    "batch_load_balance": 2.0,
 }
 
 # Default number of improvement attempts
@@ -190,6 +191,17 @@ class Optimiser:
         if not self._check_no_consecutive_after_swap(a2, a1, slot1):
             return False
 
+        # Keep hard constraint: at most one lecture per day per course.
+        day1 = self.slot_position[slot1][0]
+        day2 = self.slot_position[slot2][0]
+        for idx, a in enumerate(self.assignments):
+            if idx == idx_a1 or idx == idx_a2:
+                continue
+            if a["batch_course_id"] == a1["batch_course_id"] and a["day_of_week"] == day2:
+                return False
+            if a["batch_course_id"] == a2["batch_course_id"] and a["day_of_week"] == day1:
+                return False
+
         return True
 
     def _check_no_consecutive_after_swap(self, target: dict, other: dict, new_slot_id: str) -> bool:
@@ -238,6 +250,7 @@ class Optimiser:
         score += WEIGHTS["day_spread"] * self._penalty_day_spread()
         score += WEIGHTS["room_changes"] * self._penalty_room_changes()
         score += WEIGHTS["category_slot_alignment"] * self._penalty_category_slot_alignment()
+        score += WEIGHTS["batch_load_balance"] * self._penalty_batch_load_balance()
 
         return score
 
@@ -342,3 +355,21 @@ class Optimiser:
             category_slots[category].add(a["slot_id"])
 
         return float(sum(max(len(slots) - 1, 0) for slots in category_slots.values()))
+
+    def _penalty_batch_load_balance(self) -> float:
+        """
+        Penalise uneven distribution of a batch's total daily lectures.
+        Ideally, a batch's lectures should be balanced across days of the week.
+        """
+        batch_day_counts = defaultdict(lambda: defaultdict(int))
+        for a in self.assignments:
+            batch_day_counts[a["batch_label"]][a["day_of_week"]] += 1
+
+        penalty = 0.0
+        for batch_label, day_counts in batch_day_counts.items():
+            counts = [day_counts.get(day, 0) for day in self.slot_day_index.keys()]
+            mean_val = sum(counts) / len(counts)
+            variance = sum((x - mean_val) ** 2 for x in counts)
+            penalty += variance
+
+        return penalty

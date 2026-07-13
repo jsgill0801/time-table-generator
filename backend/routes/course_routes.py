@@ -141,6 +141,20 @@ def delete_course(course_id):
         if not course:
             return jsonify({"error": "Course not found."}), 404
 
+        # Delete dependent timetable and course mapping records
+        from backend.models.batch_course import BatchCourse
+        from backend.models.faculty_course import FacultyCourse
+        from backend.models.timetable import Timetable
+
+        db.query(Timetable).filter(
+            Timetable.batch_course_id.in_(
+                db.query(BatchCourse.auto_id).filter(BatchCourse.course_id == course_id)
+            )
+        ).delete(synchronize_session=False)
+
+        db.query(BatchCourse).filter(BatchCourse.course_id == course_id).delete(synchronize_session=False)
+        db.query(FacultyCourse).filter(FacultyCourse.course_id == course_id).delete(synchronize_session=False)
+
         db.delete(course)
         db.commit()
         return jsonify({"message": "Course deleted."}), 200

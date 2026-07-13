@@ -500,19 +500,4 @@ class ExportService:
         return name
 
     def _debug_log(self, hypothesis_id: str, location: str, message: str, data: dict):
-        # region agent log
-        try:
-            payload = {
-                "sessionId": "ecec21",
-                "runId": self._run_id,
-                "hypothesisId": hypothesis_id,
-                "location": location,
-                "message": message,
-                "data": data,
-                "timestamp": int(datetime.now().timestamp() * 1000),
-            }
-            with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-                f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-        except Exception:
-            pass
-        # endregion
+        pass

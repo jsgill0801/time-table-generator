@@ -372,31 +372,7 @@ class DataService:
                     "ltpc": bc["ltpc"],
                 })
 
-        # region agent log
-        try:
-            sample = [
-                {
-                    "course_code": d["course_code"],
-                    "batch_label": d["batch_label"],
-                    "lectures_required": d["lectures_required"],
-                    "ltpc": d["ltpc"],
-                }
-                for d in demand[:10]
-            ]
-            payload = {
-                "sessionId": "ecec21",
-                "runId": self._run_id,
-                "hypothesisId": "H7",
-                "location": "data_service.py:build_batch_lecture_demand",
-                "message": "Built demand with required sessions",
-                "data": {"demand_count": len(demand), "sample": sample},
-                "timestamp": int(datetime.now().timestamp() * 1000),
-            }
-            with open(self._debug_log_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(payload, ensure_ascii=True) + "\n")
-        except Exception:
-            pass
-        # endregion
+        pass
 
         return demand
 

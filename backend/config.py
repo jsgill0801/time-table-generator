@@ -19,12 +19,8 @@ class Config:
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-fallback-secret-key")
 
-    # Default to SQLite for zero-setup development.
-    # Switch to PostgreSQL by editing .env.
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL",
-        "sqlite:///timetable.db",
-    )
+    # PostgreSQL is the mandatory database. Specify DATABASE_URL in .env.
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
 
     # Flask-Session settings
     SESSION_TYPE = "filesystem"

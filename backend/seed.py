@@ -331,11 +331,11 @@ def seed_dataset(db, user_id: int = None) -> tuple[dict[str, int], int]:
     """
     if user_id is None:
         from backend.models.user import User
-        admin = db.query(User).filter(User.role == "admin").first()
+        admin = db.query(User).filter(User.username == "admin").first()
         if admin:
             user_id = admin.user_id
         else:
-            raise DataError("user", "No admin user found. Create an admin account first.")
+            raise DataError("user", "No master admin user ('admin') found. Create the master admin account first.")
 
     summary = {}
     total = 0
