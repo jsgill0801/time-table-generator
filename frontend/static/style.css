@@ -1519,49 +1519,46 @@ body.modal-open {
     font-weight: 500;
 }
 
-/* Application Loading Overlay */
-.loading-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(248, 246, 244, 0.95);
-    backdrop-filter: blur(8px);
-    transition: opacity 0.4s ease, visibility 0.4s ease;
+/* Skeleton Shimmer Loaders */
+.skeleton-shimmer {
+    background: linear-gradient(
+        90deg,
+        rgba(237, 233, 230, 0.6) 25%,
+        rgba(224, 216, 210, 0.9) 37%,
+        rgba(237, 233, 230, 0.6) 63%
+    );
+    background-size: 400% 100%;
+    animation: shimmer-pulse 1.4s ease infinite;
+    border-radius: var(--radius-small);
 }
 
-.loading-overlay.fade-out {
-    opacity: 0;
-    visibility: hidden;
+.skeleton-cell-bar {
+    height: 1.25rem;
+    width: 80%;
 }
 
-.loading-spinner-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5rem;
+.skeleton-cell-bar.is-actions {
+    width: 60%;
+    margin-left: auto;
 }
 
-.loading-spinner {
-    width: 3.5rem;
-    height: 3.5rem;
-    border: 0.25rem solid rgba(166, 83, 31, 0.15);
-    border-top: 0.25rem solid rgba(166, 83, 31, 0.98);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.skeleton-text-bar {
+    height: 1.1rem;
+    width: 100%;
+    margin-bottom: 0.6rem;
 }
 
-.loading-text {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: rgba(45, 26, 18, 0.9);
-    animation: pulse 1.8s ease-in-out infinite;
+.skeleton-stat-box {
+    height: 2.2rem;
+    width: 4rem;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
+@keyframes shimmer-pulse {
+    0% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
 

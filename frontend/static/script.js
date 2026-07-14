@@ -36,6 +36,7 @@
     let currentUserResolved = false;
     let currentUserPromise = null;
     let adminBootstrapPromise = null;
+    let isLoadingData = false;
 
     const RESOURCE_CONFIGS = {
         courses: {
@@ -197,47 +198,32 @@
         }
     };
 
-    function showLoadingScreen() {
-        if (isAuthPage()) return;
-        if (document.getElementById("app-loading-screen")) return;
-        const overlay = document.createElement("div");
-        overlay.id = "app-loading-screen";
-        overlay.className = "loading-overlay";
-        overlay.innerHTML = `
-            <div class="loading-spinner-container">
-                <div class="loading-spinner"></div>
-                <p class="loading-text">Loading secure database session...</p>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-    }
-
-    function hideLoadingScreen() {
-        const overlay = document.getElementById("app-loading-screen");
-        if (overlay) {
-            overlay.classList.add("fade-out");
-            setTimeout(function () {
-                overlay.remove();
-            }, 400);
-        }
-    }
-
     document.addEventListener("DOMContentLoaded", async function () {
-        showLoadingScreen();
+        isLoadingData = true;
         buildSidebar();
         setupAuthForms();
-        try {
-            await loadResourceDataFromAPI();
-            setupDashboardPage();
-            renderResourcePage();
-            setupTimetablePage();
-            setupCSVImportForms();
-            await setupUsersPage();
-        } catch (err) {
-            console.error("Initialization error:", err);
-        } finally {
-            hideLoadingScreen();
-        }
+        setupDashboardPage();
+        renderResourcePage();
+        setupTimetablePage();
+        setupCSVImportForms();
+        setupUsersPage();
+
+        loadResourceDataFromAPI()
+            .then(async function () {
+                isLoadingData = false;
+                setupDashboardPage();
+                renderResourcePage();
+                setupTimetablePage();
+                await setupUsersPage();
+            })
+            .catch(function (err) {
+                console.error("Initialization error:", err);
+                isLoadingData = false;
+                setupDashboardPage();
+                renderResourcePage();
+                setupTimetablePage();
+                setupUsersPage();
+            });
     });
 
     function isAuthPage() {
@@ -609,6 +595,28 @@
         }
 
         setDashboardStatCounts();
+
+        if (isLoadingData) {
+            const reportPanel = document.getElementById("dashboardReport");
+            if (reportPanel) {
+                reportPanel.classList.remove("is-hidden");
+                const targets = ["courseUsageCount", "courseClashCount", "facultyClashCount", "roomConflictCount", "slotConflictCount"];
+                targets.forEach(function (t) {
+                    const el = document.getElementById(t);
+                    if (el) el.innerHTML = '<div class="skeleton-shimmer skeleton-stat-box" style="width: 4rem; height: 1.5rem; margin: 0 auto;"></div>';
+                });
+                const textTargets = ["courseUsageText", "courseClashText", "facultyClashText", "roomConflictText", "slotConflictText", "conflictReportSummary", "lastRunText"];
+                textTargets.forEach(function (t) {
+                    const el = document.getElementById(t);
+                    if (el) el.innerHTML = '<div class="skeleton-shimmer skeleton-text-bar" style="width: 80%; height: 1rem;"></div>';
+                });
+                const conflictList = document.getElementById("conflictReportList");
+                if (conflictList) {
+                    conflictList.innerHTML = '<div class="skeleton-shimmer skeleton-text-bar" style="height: 3rem; width: 100%;"></div>';
+                }
+            }
+            return;
+        }
 
         const savedGeneration = getStoredGeneration();
 
@@ -2700,6 +2708,21 @@
             (config.showActions === false ? "" : '<th class="actions-header">Actions</th>') +
             "</tr>";
 
+        if (isLoadingData) {
+            if (emptyState) emptyState.classList.add("is-hidden");
+            const skeletonRowHTML =
+                "<tr>" +
+                config.columns
+                    .map(function () {
+                        return '<td><div class="skeleton-shimmer skeleton-cell-bar"></div></td>';
+                    })
+                    .join("") +
+                (config.showActions === false ? "" : '<td><div class="skeleton-shimmer skeleton-cell-bar is-actions"></div></td>') +
+                "</tr>";
+            body.innerHTML = Array(5).fill(skeletonRowHTML).join("");
+            return;
+        }
+
         body.innerHTML = rows
             .map(function (row) {
                 const rowIndex = config.rows.indexOf(row);
@@ -2792,6 +2815,22 @@
 
         setText("selectedTimetableTitle", config.title);
         setText("selectedTimetableDescription", config.description);
+
+        if (isLoadingData) {
+            if (emptyState) emptyState.classList.add("is-hidden");
+            if (chip) {
+                chip.innerHTML = '<div class="skeleton-shimmer" style="width: 3rem; height: 1.2rem; border-radius: 999px;"></div>';
+            }
+            if (statusCards) {
+                statusCards.innerHTML = Array(3).fill(
+                    '<div class="content-panel" style="margin-bottom: 1.5rem;">' +
+                        '<div class="panel-heading"><div class="skeleton-shimmer skeleton-text-bar" style="width: 12rem; height: 1.25rem;"></div></div>' +
+                        '<div style="padding: 1.25rem;"><div class="skeleton-shimmer skeleton-text-bar" style="height: 6rem; width: 100%; margin-bottom: 0;"></div></div>' +
+                    '</div>'
+                ).join("");
+            }
+            return;
+        }
 
         if (!generation) {
             if (chip) {
@@ -3037,6 +3076,15 @@
     }
 
     function setDashboardStatCounts() {
+        if (isLoadingData) {
+            const skeletonHTML = '<div class="skeleton-shimmer skeleton-stat-box" style="width: 3rem; height: 1.8rem; margin: 0 auto;"></div>';
+            const targets = ["courseCount", "facultyCount", "roomCount", "batchCount", "categoryCount", "slotCount"];
+            targets.forEach(function (t) {
+                const el = document.getElementById(t);
+                if (el) el.innerHTML = skeletonHTML;
+            });
+            return;
+        }
         setText("courseCount", RESOURCE_CONFIGS.courses.rows.length);
         setText("facultyCount", RESOURCE_CONFIGS.faculty.rows.length);
         setText("roomCount", RESOURCE_CONFIGS.rooms.rows.length);
@@ -3755,6 +3803,11 @@
             return;
         }
 
+        if (isLoadingData) {
+            loadAndRenderUsersList();
+            return;
+        }
+
         const user = await loadCurrentUser();
         if (!user || user.username !== "admin") {
             window.location.href = "/dashboard";
@@ -3783,6 +3836,23 @@
         `;
 
         try {
+            if (isLoadingData) {
+                if (emptyState) emptyState.classList.add("is-hidden");
+                if (countValueEl) countValueEl.innerHTML = '<div class="skeleton-shimmer skeleton-stat-box" style="display:inline-block; width: 3rem; height: 1.5rem; vertical-align: middle;"></div>';
+                
+                const skeletonRowHTML = `
+                    <tr>
+                        <td><div class="skeleton-shimmer skeleton-cell-bar"></div></td>
+                        <td><div class="skeleton-shimmer skeleton-cell-bar"></div></td>
+                        <td><div class="skeleton-shimmer skeleton-cell-bar"></div></td>
+                        <td><div class="skeleton-shimmer skeleton-cell-bar"></div></td>
+                        <td><div class="skeleton-shimmer skeleton-cell-bar is-actions"></div></td>
+                    </tr>
+                `;
+                tableBody.innerHTML = Array(3).fill(skeletonRowHTML).join("");
+                return;
+            }
+
             const users = await API.listUsers();
             
             if (countValueEl) {
