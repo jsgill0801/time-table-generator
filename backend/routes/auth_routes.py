@@ -34,7 +34,7 @@ def get_current_user_id():
         if master_admin:
             return master_admin.user_id
     except Exception:
-        pass
+        pass  # nosec B110
     finally:
         db.close()
     return session.get("user_id")

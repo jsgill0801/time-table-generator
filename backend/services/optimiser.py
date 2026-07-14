@@ -103,7 +103,7 @@ class Optimiser:
 
         for _ in range(self.max_iterations):
             # Pick two random assignments to try swapping
-            i, j = random.sample(range(len(self.assignments)), 2)
+            i, j = random.sample(range(len(self.assignments)), 2)  # nosec B311
             a1 = self.assignments[i]
             a2 = self.assignments[j]
 

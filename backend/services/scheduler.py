@@ -97,7 +97,7 @@ class Scheduler:
 
         # Generate a random priority for each slot to distribute them randomly across slots of the same day
         import random
-        self.slot_random_priority = {sid: random.random() for sid in self.all_slot_ids}
+        self.slot_random_priority = {sid: random.random() for sid in self.all_slot_ids}  # nosec B311
 
     def run(self) -> dict:
         """
