@@ -73,6 +73,25 @@ def create_app(config_class=DevelopmentConfig):
             "status": "running",
         })
 
+    @app.before_request
+    def clear_timetable_on_mutation():
+        from flask import request
+        if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+            path = request.path
+            # Check if it modifies data (excluding generate, auth, and logs)
+            if path.startswith("/api/v1/") and not path.startswith("/api/v1/generate") and not path.startswith("/api/v1/auth"):
+                from backend.db import get_db
+                from backend.models.timetable import Timetable
+                db = next(get_db())
+                try:
+                    db.query(Timetable).delete()
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    app.logger.error(f"Failed to clear timetable on mutation: {e}")
+                finally:
+                    db.close()
+
     @app.after_request
     def disable_response_cache(response):
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
