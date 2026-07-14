@@ -393,9 +393,7 @@
             });
 
             latestGeneration = buildGenerationFromBackend(timetableResponse, conflictsResponse);
-            if (latestGeneration) {
-                storeGeneration(latestGeneration);
-            }
+            storeGeneration(latestGeneration);
             MASTER_TIMETABLE_TEMPLATE = latestGeneration ? latestGeneration.schedule.slice() : [];
         } catch(e) { console.warn("Data load failed", e); }
     }
@@ -676,6 +674,11 @@
 
         if (savedGeneration) {
             renderDashboardReport(savedGeneration);
+        } else {
+            const reportPanel = document.getElementById("dashboardReport");
+            if (reportPanel) {
+                reportPanel.classList.add("is-hidden");
+            }
         }
 
         runButton.addEventListener("click", async function () {
