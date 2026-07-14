@@ -649,24 +649,6 @@
         setDashboardStatCounts();
 
         if (isLoadingData) {
-            const reportPanel = document.getElementById("dashboardReport");
-            if (reportPanel) {
-                reportPanel.classList.remove("is-hidden");
-                const targets = ["courseUsageCount", "courseClashCount", "facultyClashCount", "roomConflictCount", "slotConflictCount"];
-                targets.forEach(function (t) {
-                    const el = document.getElementById(t);
-                    if (el) el.innerHTML = '<div class="skeleton-shimmer skeleton-stat-box" style="width: 4rem; height: 1.5rem; margin: 0 auto;"></div>';
-                });
-                const textTargets = ["courseUsageText", "courseClashText", "facultyClashText", "roomConflictText", "slotConflictText", "conflictReportSummary", "lastRunText"];
-                textTargets.forEach(function (t) {
-                    const el = document.getElementById(t);
-                    if (el) el.innerHTML = '<div class="skeleton-shimmer skeleton-text-bar" style="width: 80%; height: 1rem;"></div>';
-                });
-                const conflictList = document.getElementById("conflictReportList");
-                if (conflictList) {
-                    conflictList.innerHTML = '<div class="skeleton-shimmer skeleton-text-bar" style="height: 3rem; width: 100%;"></div>';
-                }
-            }
             return;
         }
 
