@@ -93,10 +93,16 @@ def create_app(config_class=DevelopmentConfig):
                     db.close()
 
     @app.after_request
-    def disable_response_cache(response):
+    def apply_security_headers_and_disable_cache(response):
+        # Disable cache
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+        # OWASP Security Headers
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         return response
 
     # ------------------------------------------------------------------
