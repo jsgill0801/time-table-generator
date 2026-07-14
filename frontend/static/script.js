@@ -490,7 +490,8 @@
         setButtonBusy(submitButton, true, "Signing in...");
 
         try {
-            const response = await fetch("/api/v1/auth/login", {
+            const apiBase = window.API_BASE_URL || "/api/v1";
+            const response = await fetch(apiBase + "/auth/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -538,7 +539,8 @@
         setButtonBusy(submitButton, true, "Creating account...");
 
         try {
-            const response = await fetch("/api/v1/auth/signup", {
+            const apiBase = window.API_BASE_URL || "/api/v1";
+            const response = await fetch(apiBase + "/auth/signup", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -3411,7 +3413,8 @@
     function handleLogout() {
         clearStoredGeneration();
 
-        fetch("/api/v1/auth/logout", {
+        const apiBase = window.API_BASE_URL || "/api/v1";
+        fetch(apiBase + "/auth/logout", {
             method: "POST",
             credentials: "include"
         }).catch(function () {
