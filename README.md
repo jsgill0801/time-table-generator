@@ -98,11 +98,11 @@ This repository is optimized for **Split Cloud Deployment** (hosting the static 
 ## First-Time Setup & Credentials
 
 1. **Register the Master Admin**: When the database is newly seeded/empty, navigate to `/signup` and create the very first account with:
-   - **Username**: `admin`
-   - **Password**: `admin123`
-   - **Master Admin Password**: `admin123`
-   *(The first database user must be named `admin` to establish master privilege control).*
-2. **Log In**: Use `admin` and `admin123` on the login page.
+   - **Username**: `admin` *(The first database user must be named `admin` to establish master privilege control)*
+   - **Password**: *(Choose a secure password of your choice)*
+   - **Master Admin Password**: *(Choose a secure password of your choice)*
+   *(For local quick start/development testing, `admin123` can be used as the default).*
+2. **Log In**: Use your configured admin credentials on the login page.
 3. **Import Demo Data**: Click **"Import Sample Data"** on the dashboard to populate the database with default configurations.
 4. **Generate**: Click **"Run"** on the Dashboard, view the schedule under **"Timetable"**, and download Excel exports.
 
