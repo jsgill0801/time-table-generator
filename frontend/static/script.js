@@ -480,6 +480,60 @@
         if (logoutButton) {
             logoutButton.addEventListener("click", handleLogout);
         }
+
+        setupMobileNavigation(sidebar);
+    }
+
+    function setupMobileNavigation(sidebar) {
+        const existingBtn = document.querySelector(".mobile-menu-toggle");
+        if (existingBtn) existingBtn.remove();
+        const existingOverlay = document.querySelector(".sidebar-overlay");
+        if (existingOverlay) existingOverlay.remove();
+
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = "mobile-menu-toggle";
+        toggleBtn.type = "button";
+        toggleBtn.setAttribute("aria-label", "Toggle navigation menu");
+        toggleBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="24" height="24">
+                <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+            </svg>
+        `;
+
+        const overlay = document.createElement("div");
+        overlay.className = "sidebar-overlay";
+
+        document.body.appendChild(overlay);
+        
+        const header = document.querySelector(".page-header");
+        if (header) {
+            header.insertBefore(toggleBtn, header.firstChild);
+        } else {
+            document.body.appendChild(toggleBtn);
+        }
+
+        function openMenu() {
+            sidebar.classList.add("is-open");
+            overlay.classList.add("is-visible");
+            document.body.classList.add("menu-open");
+        }
+
+        function closeMenu() {
+            sidebar.classList.remove("is-open");
+            overlay.classList.remove("is-visible");
+            document.body.classList.remove("menu-open");
+        }
+
+        toggleBtn.addEventListener("click", function(e) {
+            e.stopPropagation();
+            if (sidebar.classList.contains("is-open")) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+
+        overlay.addEventListener("click", closeMenu);
     }
 
     function setupAuthForms() {

@@ -1399,25 +1399,113 @@ body.modal-open {
 }
 
 @media (max-width: 62rem) {
-    .app-sidebar {
-        position: static;
+    .mobile-menu-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: var(--radius-small);
+        background: rgba(45, 26, 18, 0.08);
+        color: var(--color-text);
+        border: none;
+        cursor: pointer;
+        transition: background var(--transition-fast);
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .mobile-menu-toggle:hover {
+        background: rgba(166, 83, 31, 0.12);
+    }
+
+    .page-header {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.5rem;
         width: 100%;
-        inset: auto;
-        border-radius: 0 0 var(--radius-large) var(--radius-large);
     }
 
-    .sidebar-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
+    .page-header > div {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+        min-width: 0;
     }
 
-    .sidebar-link {
-        flex: 1 1 10rem;
+    .page-header h1 {
+        font-size: 1.6rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+    }
+
+    .app-shell {
+        display: block !important;
+    }
+
+    .app-sidebar {
+        position: fixed !important;
+        inset: 0 auto 0 -100% !important;
+        width: 17rem !important;
+        height: 100vh !important;
+        z-index: 20000 !important;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        border-radius: 0 !important;
+    }
+
+    .app-sidebar.is-open {
+        left: 0 !important;
+    }
+
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(38, 32, 30, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 19999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .sidebar-overlay.is-visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    body.menu-open {
+        overflow: hidden;
     }
 
     .app-main {
-        margin-left: 0;
-        padding: 1.4rem 1.2rem 2rem;
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 1rem 0.75rem 2rem !important;
+        min-width: 0;
+    }
+
+    .sidebar-nav {
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .sidebar-link {
+        flex: none !important;
+        border-radius: 999px !important;
+    }
+}
+
+@media (min-width: 62.01rem) {
+    .mobile-menu-toggle {
+        display: none !important;
+    }
+    .sidebar-overlay {
+        display: none !important;
     }
 }
 
