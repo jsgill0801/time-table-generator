@@ -1,167 +1,135 @@
 # University Timetable Generator
 
-A full-stack web application for automated university timetable generation, built with **Flask** (Python) and vanilla **HTML/CSS/JS**.
+A full-stack web application for automated university timetable generation, built with **Flask** (Python) and vanilla **HTML/CSS/JS**. 
+
+This repository is optimized for **Split Cloud Deployment** (hosting the static frontend on Vercel, the Python API on Render, and the database on Neon Serverless PostgreSQL).
 
 ## Features
 
-- **Dashboard** — Live stats counter and overview of all configured resources with one-click generation.
+- **Dashboard** — Live stats counter, recent runs overview, and one-click schedule generation.
 - **Resource Management** — Strict CRUD interfaces for Courses, Faculty, Rooms, Batches, Categories, and Time Slots.
 - **CSV Import** — Seamless bulk data upload via CSV files for every resource type.
 - **Timetable Generation (Constraint-Based Scheduling Engine)**:
-  - **Dynamic Day-Spreading Load Balancer**: Distributes academic load uniformly across all days of the week, ensuring active sessions are balanced globally and no days (like Thursday or Friday) are left empty.
-  - **Intra-Day Randomization**: Randomly shuffles session allocation across the day's slots to prevent congestion, maintaining empty slots dynamically while preventing course/faculty clashes.
+  - **Dynamic Day-Spreading Load Balancer**: Distributes academic load uniformly across all days of the week, ensuring active sessions are balanced globally.
+  - **Intra-Day Randomization**: Shuffles session allocation across the day's slots to prevent congestion, maintaining empty slots dynamically while preventing course/faculty clashes.
   - **Hard Constraints Enforcement**: Prevents double-bookings for rooms, batches, and faculty members, ensures consecutive lecture slot safety, and respects room capacity constraints.
-- **Cascading Deletions** — Deep database cascade cleanup across all mapped entities (Courses, Batches, Categories, Classrooms, Slots, and Faculty) to guarantee zero orphan database constraints.
-- **Strict Input Validation** — Robust front-end regex validations guarding against malformed database entries (alphabets-only for names, valid formatting for emails, positive numbers, and strict codes).
+- **Cascading Deletions** — Deep database cascade cleanup across all mapped entities to guarantee zero orphan database constraints.
+- **Strict Input Validation** — Robust front-end regex validations guarding against malformed database entries.
 - **Timezone Integration** — Generates local execution records rendered explicitly using the browser's local timezone (IST).
-- **Excel Export** — Download generated timetables as multi-sheet `.xlsx` workbooks matching official formats (overall, faculty-wise, room-wise, batch-wise) generated via `openpyxl`.
+- **Excel Export** — Download generated timetables as multi-sheet `.xlsx` workbooks matching official formats (overall, faculty-wise, room-wise, batch-wise).
 - **Authentication & Authorization** — Secure session-based login/signup authenticated via hash signing with admin privilege guardrails.
-- **Conflict Reporting** — Automatic diagnosis and reporting of scheduling bottlenecks and conflicts.
+- **User Management** — Only the master admin (`admin`) can manage other user accounts under the dedicated **Users** tab.
+- **Modern UI/UX Polish**:
+  - **Skeleton Shimmer Loaders**: Displays shimmering placeholders in tables and stat cards during database operations to avoid empty layout shifts.
+  - **Mobile Responsive Drawer**: Uses a collapsible sliding menu drawer with a blurred backdrop overlay to fit phone and tablet viewports natively.
 
-## Tech Stack
+---
 
-| Layer      | Technology                         |
-|------------|-------------------------------------|
-| Backend    | Python 3.10+, Flask, SQLAlchemy     |
-| Frontend   | HTML5, CSS3 (Inter + Georgia fonts), Vanilla JS |
-| Database   | PostgreSQL (Mandatory)              |
-| Export     | openpyxl (Excel generation)         |
+## Architecture & Tech Stack
 
-## Quick Start
+| Layer      | Production Hosting | Technology |
+|------------|--------------------|------------|
+| **Frontend** | **Vercel** (Static Host) | HTML5, CSS3, Vanilla Javascript |
+| **Backend**  | **Render** (Web Service) | Python 3.10+, Flask, SQLAlchemy, Gunicorn |
+| **Database** | **Neon** (Serverless DB)  | PostgreSQL |
+| **Export**   | (Backend Service) | openpyxl (Excel Workbook generation) |
+
+---
+
+## Deployment & Configuration
+
+### 1. Database (Neon)
+1. Create a free PostgreSQL instance on **[Neon](https://neon.tech/)**.
+2. Copy the database connection string (`postgresql://...`).
+
+### 2. Backend (Render)
+1. Create a new **Web Service** on **[Render](https://render.com/)** connected to your repository.
+2. Set the following settings:
+   - **Environment**: `Python`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn --bind 0.0.0.0:$PORT wsgi:app`
+3. Add the following **Environment Variables**:
+   - `DATABASE_URL`: *(Your Neon Connection String)*
+   - `ALLOWED_ORIGINS`: `https://your-vercel-app-url.vercel.app` (to authorize CORS requests)
+   - `FLASK_ENV`: `production`
+
+### 3. Frontend (Vercel)
+1. Open **[frontend/static/config.js](frontend/static/config.js)** and set your Render URL:
+   ```javascript
+   window.API_BASE_URL = "https://your-render-backend-url.onrender.com/api/v1";
+   ```
+2. Deploy the root of the project to **[Vercel](https://vercel.com/)**.
+3. Vercel will automatically read the `vercel.json` config file to serve clean URLs (mapping `/dashboard` to `/frontend/dashboard.html` automatically).
+
+---
+
+## Local Development Quick Start
 
 ### Prerequisites
-
-- Python 3.10 or higher
-- PostgreSQL Server
+- Python 3.10+
+- Local PostgreSQL instance or active Neon connection string
 
 ### Setup
+1. Clone the repository and navigate to it:
+   ```bash
+   git clone https://github.com/jsgill0801/time-table-generator.git
+   cd time-table-generator
+   ```
+2. Create a virtual environment and install dependencies:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+3. Create a `.env` file in the root folder with:
+   ```env
+   DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+   ```
+4. Run the Flask backend locally:
+   ```bash
+   python -m backend.app
+   ```
+5. View the app at **http://localhost:5000**.
 
-```bash
-# 1. Navigate to the project directory
-cd time-table-generator
+*Note: For local hosting, keep `window.API_BASE_URL` commented out or set to `"/api/v1"` in `frontend/static/config.js` to route requests to the local Flask server.*
 
-# 2. Install dependencies
-pip install -r requirements.txt
+---
 
-# 3. Configure environment
-#    Edit .env to set your PostgreSQL connection string:
-#    DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+## First-Time Setup & Credentials
 
-# 4. Run the application
-python -m backend.app
-```
-
-The application starts at **http://localhost:5000**
-
-### First-Time Setup & Testing
-
-1. **Start the Application**: Run `python -m backend.app` and open http://localhost:5000 in your browser.
-2. **Log In as Master Admin**: Log in directly with the default master admin credentials:
+1. **Register the Master Admin**: When the database is newly seeded/empty, navigate to `/signup` and create the very first account with:
    - **Username**: `admin`
    - **Password**: `admin123`
-3. **Registering New Accounts**: To create a new user or administrator:
-   - Click **"Create one"** on the login page (or go to `/signup`).
-   - Fill in the username, email, and password.
-   - Enter the **Master Admin Password** (`admin123`) to authorize the account creation. All newly registered accounts are set up as administrators.
-4. **User Management**:
-   - Only the master admin (`admin`) can view and manage user accounts.
-   - When logged in as `admin`, click the **"Users"** tab in the sidebar to see all registered accounts and delete them if needed (except for the core `admin` account).
-5. **Generate Timetable**: Use the sidebar to navigate, import sample data via CSV (under each resource page) or add manually, then click **Run** on the Dashboard and export on the **Timetable** page.
+   - **Master Admin Password**: `admin123`
+   *(The first database user must be named `admin` to establish master privilege control).*
+2. **Log In**: Use `admin` and `admin123` on the login page.
+3. **Import Demo Data**: Click **"Import Sample Data"** on the dashboard to populate the database with default configurations.
+4. **Generate**: Click **"Run"** on the Dashboard, view the schedule under **"Timetable"**, and download Excel exports.
 
-## Project Structure
-
-```
-time-table-generator/
-├── backend/
-│   ├── app.py                  # Flask application factory
-│   ├── config.py               # Environment configuration
-│   ├── db.py                   # SQLAlchemy engine & session
-│   ├── models/                 # Database models (ORM)
-│   ├── routes/                 # API endpoints + frontend serving
-│   │   ├── frontend_routes.py  # Serves HTML pages
-│   │   ├── import_routes.py    # CSV import endpoints
-│   │   ├── generate_routes.py  # Timetable generation
-│   │   ├── export_routes.py    # Excel download
-│   │   └── ...                 # CRUD routes for each entity
-│   ├── services/               # Business logic layer
-│   │   ├── scheduler.py        # Hard-constraint scheduler
-│   │   ├── optimiser.py        # Soft-constraint optimizer
-│   │   ├── export_service.py   # Excel workbook generation
-│   │   └── ...
-│   ├── parsers/                # CSV parsing & validation
-│   └── utils/                  # Helpers, middleware, logging
-├── frontend/
-│   ├── templates/              # HTML pages
-│   │   ├── login.html
-│   │   ├── dashboard.html
-│   │   ├── courses.html
-│   │   └── ...
-│   └── static/                 # CSS & JavaScript
-│       ├── style.css           # Full application stylesheet
-│       ├── api.js              # Centralised API client
-│       └── script.js           # Application logic & UI rendering
-├── .env                        # Environment variables
-├── requirements.txt            # Python dependencies
-└── README.md
-```
+---
 
 ## API Endpoints
 
 All API endpoints are prefixed with `/api/v1/`.
 
-| Method | Endpoint                | Description                     |
-|--------|-------------------------|---------------------------------|
-| POST   | `/auth/signup`          | Register a new user             |
-| POST   | `/auth/login`           | Log in and start session        |
-| POST   | `/auth/logout`          | End current session             |
-| GET    | `/courses/`             | List all courses                |
-| POST   | `/courses/`             | Create a course                 |
-| GET    | `/batches/`             | List all batches                |
-| GET    | `/faculties/`           | List all faculty                |
-| GET    | `/classrooms/`          | List all classrooms             |
-| GET    | `/slots/`               | List all time slots             |
-| GET    | `/categories/`          | List all categories             |
-| POST   | `/import/courses`       | Import courses from CSV         |
-| POST   | `/import/batches`       | Import batches from CSV         |
-| POST   | `/import/faculties`     | Import faculty from CSV         |
-| POST   | `/import/classrooms`    | Import classrooms from CSV      |
-| POST   | `/import/slots`         | Import slots from CSV           |
-| POST   | `/import/categories`    | Import categories from CSV      |
-| POST   | `/generate/`            | Trigger timetable generation    |
-| GET    | `/export/download`      | Download timetable as Excel     |
-| GET    | `/export/preview`       | Preview timetable grid as JSON  |
-| GET    | `/data/counts`          | Record counts per table         |
-
-## CSV Import Formats
-
-Each resource page shows the required CSV column headers. Examples:
-
-**Courses:**
-```csv
-course_code,course_name,lectures,tutorials,labs,credits
-ICT201,Data Structures,3,1,0,4
-```
-
-**Faculty:**
-```csv
-faculty_code,faculty_name,faculty_email,max_load
-PD,Dr. Priya Desai,pd@college.edu,18
-```
-
-**Batches:**
-```csv
-program,branch,semester,section
-BTech,Computer Science,4,A
-```
-
-## Environment Variables
-
-| Variable       | Default                                | Description            |
-|----------------|----------------------------------------|------------------------|
-| `DATABASE_URL` | `postgresql://user:password@localhost:5432/dbname` | PostgreSQL database connection string (Mandatory) |
-| `SECRET_KEY`   | *(auto-generated)*                     | Flask session signing  |
-| `FLASK_ENV`    | `development`                          | Flask environment mode |
-
-## License
-
-This project is developed for academic purposes as part of the university curriculum.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/signup` | Register a new user |
+| POST | `/auth/login` | Log in and start session |
+| POST | `/auth/logout` | End current session |
+| GET | `/courses/` | List all courses |
+| POST | `/courses/` | Create a course |
+| GET | `/batches/` | List all batches |
+| GET | `/faculties/` | List all faculty |
+| GET | `/classrooms/` | List all classrooms |
+| GET | `/slots/` | List all time slots |
+| GET | `/categories/` | List all categories |
+| POST | `/import/courses` | Import courses from CSV |
+| POST | `/import/batches` | Import batches from CSV |
+| POST | `/import/faculties` | Import faculty from CSV |
+| POST | `/import/classrooms`| Import classrooms from CSV |
+| POST | `/import/slots` | Import slots from CSV |
+| POST | `/import/categories`| Import categories from CSV |
+| POST | `/generate/` | Trigger timetable generation |
+| GET | `/timetable/` | Fetch generated timetable slots |
+| GET | `/export/download/overall` | Download overall timetable Excel |
