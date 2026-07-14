@@ -197,15 +197,47 @@
         }
     };
 
+    function showLoadingScreen() {
+        if (isAuthPage()) return;
+        if (document.getElementById("app-loading-screen")) return;
+        const overlay = document.createElement("div");
+        overlay.id = "app-loading-screen";
+        overlay.className = "loading-overlay";
+        overlay.innerHTML = `
+            <div class="loading-spinner-container">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Loading secure database session...</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    function hideLoadingScreen() {
+        const overlay = document.getElementById("app-loading-screen");
+        if (overlay) {
+            overlay.classList.add("fade-out");
+            setTimeout(function () {
+                overlay.remove();
+            }, 400);
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", async function () {
+        showLoadingScreen();
         buildSidebar();
         setupAuthForms();
-        await loadResourceDataFromAPI();
-        setupDashboardPage();
-        renderResourcePage();
-        setupTimetablePage();
-        setupCSVImportForms();
-        await setupUsersPage();
+        try {
+            await loadResourceDataFromAPI();
+            setupDashboardPage();
+            renderResourcePage();
+            setupTimetablePage();
+            setupCSVImportForms();
+            await setupUsersPage();
+        } catch (err) {
+            console.error("Initialization error:", err);
+        } finally {
+            hideLoadingScreen();
+        }
     });
 
     function isAuthPage() {
