@@ -582,7 +582,7 @@
 
             window.location.href = "/dashboard";
         } catch (error) {
-            setError(errorBox, "Unable to reach the login service right now. Please verify the server is running.");
+            setError(errorBox, "Unable to reach the login service. Note: The backend is hosted on Render's free tier and may take 1-2 minutes to spin up from sleep if it hasn't been accessed recently. Please wait a moment and click Sign In again.");
         } finally {
             setButtonBusy(submitButton, false, "Sign In");
         }
@@ -633,7 +633,7 @@
 
             window.location.href = "/login";
         } catch (error) {
-            setError(errorBox, "Unable to reach the signup service right now. Please verify the server is running.");
+            setError(errorBox, "Unable to reach the signup service. Note: The backend is hosted on Render's free tier and may take 1-2 minutes to spin up from sleep if it hasn't been accessed recently. Please wait a moment and click Create Account again.");
         } finally {
             setButtonBusy(submitButton, false, "Create Account");
         }
